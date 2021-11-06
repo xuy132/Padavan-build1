@@ -15,10 +15,12 @@ CONFIG_UDP_FILE=/tmp/${NAME}_u.json
 CONFIG_SOCK5_FILE=/tmp/${NAME}_s.json
 CONFIG_KUMASOCKS_FILE=/tmp/kumasocks.toml
 v2_json_file="/tmp/v2-redir.json"
+xray_json_file="/tmp/x-redir.json"
 trojan_json_file="/tmp/tj-redir.json"
 server_count=0
 redir_tcp=0
 v2ray_enable=0
+xray_enable=0
 redir_udp=0
 tunnel_enable=0
 local_enable=0
@@ -40,6 +42,7 @@ find_bin() {
 	ssr-local) ret="/usr/bin/ssr-local" ;;
 	ssr-server) ret="/usr/bin/ssr-server" ;;
 	v2ray) ret="/tmp/v2ray" ;;
+	xray) ret="/tmp/xray" ;;
 	trojan) ret="/tmp/trojan" ;;
 	socks5) ret="/usr/bin/ipt2socks" ;;
 	esac
@@ -100,6 +103,24 @@ local type=$stype
 		sed -i 's/\\//g' $v2_json_file
 		fi
 		;;
+	xray)
+		if [ ! -f "/tmp/xray" ]; then
+			logger -t "SS" "xray二进制文件下载失败，可能是地址失效或者网络异常！"
+			nvram set ss_enable=0
+			ssp_close
+		else
+			logger -t "SS" "xray二进制文件下载成功或者已存在"
+			chmod -R 777 /tmp/xray
+		fi
+		xray_enable=1
+		if [ "$2" = "1" ]; then
+		lua /etc_ro/ss/genxrayconfig.lua $1 udp 1080 >/tmp/xray-ssr-reudp.json
+		sed -i 's/\\//g' /tmp/xray-ssr-reudp.json
+		else
+		lua /etc_ro/ss/genxrayconfig.lua $1 tcp 1080 >$xray_json_file
+		sed -i 's/\\//g' $xray_json_file
+		fi
+		;;
 	esac
 }
 
@@ -116,12 +137,17 @@ start_rules() {
 	case "$stype" in
 	trojan)
 		if [ ! -f "/tmp/trojan" ];then
-			curl -k -s -o /tmp/trojan --connect-timeout 10 --retry 3 https://cdn.jsdelivr.net/gh/wangziyingwen/OutSide/trojan/trojan
+			curl -k -s -o /tmp/trojan --connect-timeout 10 --retry 3 https://cdn.jsdelivr.net/gh/vipshmily/OutSide/trojan/trojan
 		fi
 		;;
 	v2ray)
 		if [ ! -f "/tmp/v2ray" ];then
-			curl -k -s -o /tmp/v2ray --connect-timeout 10 --retry 3 https://cdn.jsdelivr.net/gh/wangziyingwen/OutSide/v2ray/v2ray
+			curl -k -s -o /tmp/v2ray --connect-timeout 10 --retry 3 https://cdn.jsdelivr.net/gh/vipshmily/OutSide/v2ray/v2ray
+		fi
+		;;
+	xray)
+		if [ ! -f "/tmp/xray" ];then
+			curl -k -s -o /tmp/xray --connect-timeout 10 --retry 3 https://cdn.jsdelivr.net/gh/vipshmily/OutSide/xray/xray
 		fi
 		;;
 	esac
@@ -239,6 +265,10 @@ start_redir_tcp() {
 		$bin -config $v2_json_file >/dev/null 2>&1 &
 		echo "$(date "+%Y-%m-%d %H:%M:%S") $($bin -version | head -1) 启动成功!" >>/tmp/ssrplus.log
 		;;
+	xray)
+		$bin -config $xray_json_file >/dev/null 2>&1 &
+		echo "$(date "+%Y-%m-%d %H:%M:%S") $($bin -version | head -1) 启动成功!" >>/tmp/ssrplus.log
+		;;
 	socks5)
 		for i in $(seq 1 $threads); do
 		lua /etc_ro/ss/gensocks.lua $GLOBAL_SERVER 1080 >/dev/null 2>&1 &
@@ -267,6 +297,10 @@ start_redir_udp() {
 		v2ray)
 			gen_config_file $UDP_RELAY_SERVER 1
 			$bin -config /tmp/v2-ssr-reudp.json >/dev/null 2>&1 &
+			;;
+		xray)
+			gen_config_file $UDP_RELAY_SERVER 1
+			$bin -config /tmp/xray-ssr-reudp.json >/dev/null 2>&1 &
 			;;
 		trojan)
 			gen_config_file $UDP_RELAY_SERVER 1
@@ -392,6 +426,12 @@ start_local() {
 		$bin -config /tmp/v2-ssr-local.json >/dev/null 2>&1 &
 		echo "$(date "+%Y-%m-%d %H:%M:%S") Global_Socks5:$($bin -version | head -1) Started!" >>/tmp/ssrplus.log
 		;;
+	xray)
+		lua /etc_ro/ss/genxrayconfig.lua $local_server tcp 0 $s5_port >/tmp/xray-ssr-local.json
+		sed -i 's/\\//g' /tmp/xray-ssr-local.json
+		$bin -config /tmp/xray-ssr-local.json >/dev/null 2>&1 &
+		echo "$(date "+%Y-%m-%d %H:%M:%S") Global_Socks5:$($bin -version | head -1) Started!" >>/tmp/ssrplus.log
+		;;
 	trojan)
 		lua /etc_ro/ss/gentrojanconfig.lua $local_server client $s5_port >/tmp/trojan-ssr-local.json
 		sed -i 's/\\//g' /tmp/trojan-ssr-local.json
@@ -427,6 +467,14 @@ start_watchcat() {
 		if [ $total_count -gt 0 ]; then
 			#param:server(count) redir_tcp(0:no,1:yes)  redir_udp tunnel kcp local gfw
 			/usr/bin/ssr-monitor $server_count $redir_tcp $redir_udp $tunnel_enable $v2ray_enable $local_enable $pdnsd_enable_flag >/dev/null 2>&1 &
+		fi
+	fi
+}
+       if [ $(nvram get ss_watchcat) = 1 ]; then
+		let total_count=server_count+redir_tcp+redir_udp+tunnel_enable+xray_enable+local_enable+pdnsd_enable_flag
+		if [ $total_count -gt 0 ]; then
+			#param:server(count) redir_tcp(0:no,1:yes)  redir_udp tunnel kcp local gfw
+			/usr/bin/ssr-monitor $server_count $redir_tcp $redir_udp $tunnel_enable $xray_enable $local_enable $pdnsd_enable_flag >/dev/null 2>&1 &
 		fi
 	fi
 }
@@ -506,6 +554,11 @@ kill_process() {
 		logger -t "SS" "关闭V2Ray进程..."
 		killall v2ray >/dev/null 2>&1
 		kill -9 "$v2ray_process" >/dev/null 2>&1
+	xray_process=$(pidof xray)
+	if [ -n "$xray_process" ]; then
+		logger -t "SS" "关闭XRay进程..."
+		killall xray >/dev/null 2>&1
+		kill -9 "$xray_process" >/dev/null 2>&1
 	fi
 	ssredir=$(pidof ss-redir)
 	if [ -n "$ssredir" ]; then
@@ -621,4 +674,3 @@ reserver)
 	#exit 0
 	;;
 esac
-
