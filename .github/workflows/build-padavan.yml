@@ -39,7 +39,7 @@ jobs:
     
     - name: Build Firmware
       env:
-        TNAME: PSG1218_hzn
+        TNAME: PSG1218
       run: |
         if [ -f public/shadowsocks.sh ] ; then
         mv -f public/shadowsocks.sh /opt/rt-n56u/trunk/user/shadowsocks/scripts/shadowsocks.sh
@@ -47,8 +47,8 @@ jobs:
         else
         exit 1
         fi 
-        if [ -f public/PSG1218_hzn.config ] ; then
-        mv -f public/PSG1218_hzn.config /opt/rt-n56u/trunk/configs/templates/PSG1218.config
+        if [ -f public/PSG1218.config ] ; then
+        mv -f public/PSG1218.config /opt/rt-n56u/trunk/configs/templates/PSG1218.config
         echo "config file copy success"
         else
         exit 2
