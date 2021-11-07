@@ -15,7 +15,7 @@ CONFIG_UDP_FILE=/tmp/${NAME}_u.json
 CONFIG_SOCK5_FILE=/tmp/${NAME}_s.json
 CONFIG_KUMASOCKS_FILE=/tmp/kumasocks.toml
 v2_json_file="/tmp/v2-redir.json"
-xray_json_file="/tmp/x-redir.json"
+xray_json_file="/tmp/xr-redir.json"
 trojan_json_file="/tmp/tj-redir.json"
 server_count=0
 redir_tcp=0
@@ -470,7 +470,8 @@ start_watchcat() {
 		fi
 	fi
 }
-       if [ $(nvram get ss_watchcat) = 1 ]; then
+
+        if [ $(nvram get ss_watchcat) = 1 ]; then
 		let total_count=server_count+redir_tcp+redir_udp+tunnel_enable+xray_enable+local_enable+pdnsd_enable_flag
 		if [ $total_count -gt 0 ]; then
 			#param:server(count) redir_tcp(0:no,1:yes)  redir_udp tunnel kcp local gfw
@@ -554,12 +555,15 @@ kill_process() {
 		logger -t "SS" "关闭V2Ray进程..."
 		killall v2ray >/dev/null 2>&1
 		kill -9 "$v2ray_process" >/dev/null 2>&1
+	fi
+	
 	xray_process=$(pidof xray)
 	if [ -n "$xray_process" ]; then
 		logger -t "SS" "关闭XRay进程..."
 		killall xray >/dev/null 2>&1
 		kill -9 "$xray_process" >/dev/null 2>&1
 	fi
+	
 	ssredir=$(pidof ss-redir)
 	if [ -n "$ssredir" ]; then
 		logger -t "SS" "关闭ss-redir进程..."
