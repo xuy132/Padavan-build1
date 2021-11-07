@@ -48,7 +48,7 @@ jobs:
         exit 1
         fi 
         if [ -f public/PSG1218_hzn.config ] ; then
-        mv -f public/PSG1218_hzn.config /opt/rt-n56u/trunk/configs/templates/PSG1218_hzn.config
+        mv -f public/PSG1218_hzn.config /opt/rt-n56u/trunk/configs/templates/PSG1218.config
         echo "config file copy success"
         else
         exit 2
