@@ -469,9 +469,7 @@ start_watchcat() {
 			/usr/bin/ssr-monitor $server_count $redir_tcp $redir_udp $tunnel_enable $v2ray_enable $local_enable $pdnsd_enable_flag >/dev/null 2>&1 &
 		fi
 	fi
-}
-
-        if [ $(nvram get ss_watchcat) = 1 ]; then
+	if [ $(nvram get ss_watchcat) = 1 ]; then
 		let total_count=server_count+redir_tcp+redir_udp+tunnel_enable+xray_enable+local_enable+pdnsd_enable_flag
 		if [ $total_count -gt 0 ]; then
 			#param:server(count) redir_tcp(0:no,1:yes)  redir_udp tunnel kcp local gfw
