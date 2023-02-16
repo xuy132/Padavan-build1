@@ -982,7 +982,6 @@ static int CreatePCPMap_NAT(pcp_info_t *pcp_msg_info)
 				   timestamp);
 	if (r < 0)
 		return PCP_ERR_NO_RESOURCES;
-	pcp_msg_info->ext_port = pcp_msg_info->int_port;
 	return PCP_SUCCESS;
 }
 
@@ -1561,7 +1560,7 @@ int ProcessIncomingPCPPacket(int s, unsigned char *buff, int len,
 	if (!GETFLAG(PCP_ALLOWTHIRDPARTYMASK)) {
 		lan_addr = get_lan_for_peer(senderaddr);
 		if(lan_addr == NULL) {
-			syslog(LOG_DEBUG, "PCP packet sender %s not from a LAN, ignoring",
+			syslog(LOG_WARNING, "PCP packet sender %s not from a LAN, ignoring",
 			       addr_str);
 			return 0;
 		}
@@ -1581,7 +1580,7 @@ int ProcessIncomingPCPPacket(int s, unsigned char *buff, int len,
 		                  sizeof(struct sockaddr_in6),
 		           receiveraddr);
 		if( len < 0 ) {
-			syslog(LOG_DEBUG, "sendto(pcpserver): %m");
+			syslog(LOG_ERR, "sendto(pcpserver): %m");
 		}
 	}
 

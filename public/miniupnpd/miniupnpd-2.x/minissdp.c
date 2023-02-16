@@ -171,7 +171,8 @@ OpenAndConfSSDPReceiveSocket(int ipv6)
 		saddr->sin6_port = htons(SSDP_PORT);
 		saddr->sin6_addr = ipv6_bind_addr;
 		sockname_len = sizeof(struct sockaddr_in6);
-	} else
+	}
+	else
 #endif /* ENABLE_IPV6 */
 	{
 		struct sockaddr_in * saddr = (struct sockaddr_in *)&sockname;
@@ -527,7 +528,7 @@ SendSSDPResponse(int s, const struct sockaddr * addr,
 	       n, addr_str, l, buf);
 	if(n < 0)
 	{
-		syslog(LOG_DEBUG, "%s: sendto(udp): %m",
+		syslog(LOG_ERR, "%s: sendto(udp): %m",
 		       "SendSSDPResponse()");
 	}
 }
@@ -625,7 +626,7 @@ SendSSDPNotify(int s, const struct sockaddr * dest, socklen_t dest_len,
 	}
 	n = sendto_or_schedule(s, bufr, l, 0, dest, dest_len);
 	if(n < 0) {
-		syslog(LOG_DEBUG, "sendto(udp_notify=%d, %s): %m", s,
+		syslog(LOG_ERR, "sendto(udp_notify=%d, %s): %m", s,
 		       host ? host : "NULL");
 	} else if(n != l) {
 		syslog(LOG_NOTICE, "sendto() sent %d out of %d bytes", n, l);
@@ -864,7 +865,7 @@ ProcessSSDPData(int s, const char *bufr, int n,
 	lan_addr = get_lan_for_peer(sender);
 	if(lan_addr == NULL)
 	{
-		syslog(LOG_DEBUG, "SSDP packet sender %s not from a LAN, ignoring",
+		syslog(LOG_WARNING, "SSDP packet sender %s not from a LAN, ignoring",
 		       sender_str);
 		return;
 	}
@@ -970,7 +971,7 @@ ProcessSSDPData(int s, const char *bufr, int n,
 			{
 				if (lan_addr == NULL)
 				{
-					syslog(LOG_INFO,
+					syslog(LOG_ERR,
 					       "Can't find in which sub network the client %s is",
 					       sender_str);
 					return;
@@ -1174,7 +1175,7 @@ ProcessSSDPData(int s, const char *bufr, int n,
 	}
 	else
 	{
-		syslog(LOG_DEBUG, "Unknown udp packet received from %s", sender_str);
+		syslog(LOG_NOTICE, "Unknown udp packet received from %s", sender_str);
 	}
 }
 
@@ -1216,7 +1217,7 @@ SendSSDPbyebye(int s, const struct sockaddr * dest, socklen_t destlen,
 	n = sendto_or_schedule(s, bufr, l, 0, dest, destlen);
 	if(n < 0)
 	{
-		syslog(LOG_DEBUG, "sendto(udp_shutdown=%d): %m", s);
+		syslog(LOG_ERR, "sendto(udp_shutdown=%d): %m", s);
 		return -1;
 	}
 	else if(n != l)

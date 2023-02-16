@@ -32,9 +32,7 @@ getifstats(const char * ifname, struct ifdata * data)
 	char * p;
 	int i;
 	int r = -1;
-#if 0
 	char fname[64];
-#endif
 #ifdef ENABLE_GETIFSTATS_CACHING
 	static time_t cache_timestamp = 0;
 	static struct ifdata cache_data;
@@ -98,9 +96,7 @@ getifstats(const char * ifname, struct ifdata * data)
 		break;
 	}
 	fclose(f);
-#if 0 /* Disable get speed */
 	/* get interface speed */
-	/* NB! some interfaces, like ppp, don't support speed queries */
 	snprintf(fname, sizeof(fname), "/sys/class/net/%s/speed", ifname);
 	f = fopen(fname, "r");
 	if(f) {
@@ -113,7 +109,6 @@ getifstats(const char * ifname, struct ifdata * data)
 	} else {
 		syslog(LOG_INFO, "cannot read %s file : %m", fname);
 	}
-#endif
 #ifdef GET_WIRELESS_STATS
 	if(data->baudrate == BAUDRATE_DEFAULT) {
 		struct iwreq iwr;

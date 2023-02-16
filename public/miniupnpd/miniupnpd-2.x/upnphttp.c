@@ -13,7 +13,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <arpa/inet.h>
 #include <sys/param.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -846,7 +845,7 @@ ProcessHttpQuery_upnphttp(struct upnphttp * h)
 			return;
 		}
 #endif
-		syslog(LOG_INFO, "%s not found, responding ERROR 404", HttpUrl);
+		syslog(LOG_NOTICE, "%s not found, responding ERROR 404", HttpUrl);
 		Send404(h);
 	}
 #ifdef ENABLE_EVENTS
@@ -869,7 +868,7 @@ ProcessHttpQuery_upnphttp(struct upnphttp * h)
 #endif
 	else
 	{
-		syslog(LOG_DEBUG, "Unsupported HTTP Command %s", HttpCommand);
+		syslog(LOG_NOTICE, "Unsupported HTTP Command %s", HttpCommand);
 		Send501(h);
 	}
 }
@@ -924,8 +923,7 @@ Process_upnphttp(struct upnphttp * h)
 		}
 		else if(n==0)
 		{
-			syslog(LOG_DEBUG, "HTTP Connection from %s closed unexpectedly",
-				inet_ntoa(h->clientaddr));
+			syslog(LOG_WARNING, "HTTP Connection from %s closed unexpectedly", inet_ntoa(h->clientaddr));
 			h->state = EToDelete;
 		}
 		else
@@ -995,8 +993,7 @@ Process_upnphttp(struct upnphttp * h)
 		}
 		else if(n==0)
 		{
-			syslog(LOG_DEBUG, "HTTP Connection from %s closed unexpectedly",
-				inet_ntoa(h->clientaddr));
+			syslog(LOG_WARNING, "HTTP Connection from %s closed unexpectedly", inet_ntoa(h->clientaddr));
 			h->state = EToDelete;
 		}
 		else

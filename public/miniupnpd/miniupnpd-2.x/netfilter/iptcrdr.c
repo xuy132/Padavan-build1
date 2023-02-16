@@ -13,15 +13,13 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <dlfcn.h>
-#ifdef IPTABLES_143
 #include <xtables.h>
-#endif
 #include <linux/netfilter/xt_DSCP.h>
 #include <libiptc/libiptc.h>
 
 #include <linux/version.h>
 
-#ifdef IPTABLES_143
+#if IPTABLES_143
 /* IPTABLES API version >= 1.4.3 */
 
 /* added in order to compile on gentoo :
@@ -43,7 +41,7 @@
 #else
 /* IPTABLES API version < 1.4.3 */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22)
-#include <linux/netfilter/nf_nat.h>
+#include <linux/netfilter_ipv4/ip_nat.h>
 #else
 #if 0
 #include <linux/netfilter/nf_nat.h>

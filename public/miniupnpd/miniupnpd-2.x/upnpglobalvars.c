@@ -95,20 +95,20 @@ const char * tag = 0;
 
 /* iptables -t nat -N MINIUPNPD
  * iptables -t nat -A PREROUTING -i <ext_if_name> -j MINIUPNPD */
-const char * miniupnpd_nat_chain = "upnp";
+const char * miniupnpd_nat_chain = "MINIUPNPD";
 
 /* iptables -t nat -N MINIUPNPD-POSTROUTING
  * iptables -t nat -A POSTROUTING -o <ext_if_name> -j MINIUPNPD-POSTROUTING */
-const char * miniupnpd_nat_postrouting_chain = "upnp-post";
+const char * miniupnpd_nat_postrouting_chain = "MINIUPNPD-POSTROUTING";
 
 /* iptables -t filter -N MINIUPNPD
  * iptables -t filter -A FORWARD -i <ext_if_name> ! -o <ext_if_name> -j MINIUPNPD */
-const char * miniupnpd_forward_chain = "upnp";
+const char * miniupnpd_forward_chain = "MINIUPNPD";
 
 #ifdef ENABLE_UPNPPINHOLE
 /* ip6tables -t filter -N MINIUPNPD
  * ip6tables -t filter -A FORWARD -i <ext_if_name> ! -o <ext_if_name> -j MINIUPNPD */
-const char * miniupnpd_v6_filter_chain = "upnp";
+const char * miniupnpd_v6_filter_chain = "MINIUPNPD";
 #endif /* ENABLE_UPNPPINHOLE */
 
 #endif /* USE_NETFILTER */
