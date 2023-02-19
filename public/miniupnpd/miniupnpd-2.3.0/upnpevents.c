@@ -491,7 +491,7 @@ static void upnp_event_send(struct upnp_event_notify * obj)
 	i = send(obj->s, obj->buffer + obj->sent, obj->tosend - obj->sent, 0);
 	if(i<0) {
 		if(errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
-			syslog(LOG_DEBUG, "%s: send(%s%s): %m", "upnp_event_send",
+			syslog(LOG_NOTICE, "%s: send(%s%s): %m", "upnp_event_send",
 			       obj->addrstr, obj->portstr);
 			obj->state = EError;
 			return;
@@ -516,7 +516,7 @@ static void upnp_event_recv(struct upnp_event_notify * obj)
 		if(errno != EAGAIN &&
 		   errno != EWOULDBLOCK &&
 		   errno != EINTR) {
-			syslog(LOG_DEBUG, "%s: recv(): %m", "upnp_event_recv");
+			syslog(LOG_ERR, "%s: recv(): %m", "upnp_event_recv");
 			obj->state = EError;
 		}
 		return;
@@ -547,7 +547,7 @@ upnp_event_process_notify(struct upnp_event_notify * obj)
 		}
 		if(err != 0) {
 			errno = err;
-			syslog(LOG_DEBUG, "%s: connect(%s%s): %m",
+			syslog(LOG_WARNING, "%s: connect(%s%s): %m",
 			       "upnp_event_process_notify",
 			       obj->addrstr, obj->portstr);
 			obj->state = EError;
@@ -632,7 +632,7 @@ void upnpevents_processfds(fd_set *readset, fd_set *writeset)
 				obj->sub->notify = NULL;
 			/* remove also the subscriber from the list if there was an error */
 			if(obj->state == EError && obj->sub) {
-				syslog(LOG_DEBUG, "%s: %p, remove subscriber %s after an ERROR cb: %s",
+				syslog(LOG_ERR, "%s: %p, remove subscriber %s after an ERROR cb: %s",
 				       "upnpevents_processfds", obj, obj->sub->uuid, obj->sub->callback);
 				LIST_REMOVE(obj->sub, entries);
 				free(obj->sub);

@@ -481,7 +481,7 @@ ProcessIncomingHTTP(int shttpl, const char * protocol)
 		if(get_lan_for_peer((struct sockaddr *)&clientname) == NULL)
 		{
 			/* The peer is not a LAN ! */
-			syslog(LOG_DEBUG,
+			syslog(LOG_WARNING,
 			       "%s peer %s is not from a LAN, closing the connection",
 			       protocol, addr_str);
 			close(shttp);
@@ -2226,7 +2226,7 @@ main(int argc, char * * argv)
 		return 0;
 	}
 
-	syslog(LOG_NOTICE, "version " MINIUPNPD_VERSION " starting%s%sext if %s BOOTID=%u",
+	syslog(LOG_INFO, "version " MINIUPNPD_VERSION " starting%s%sext if %s BOOTID=%u",
 #ifdef ENABLE_NATPMP
 #ifdef ENABLE_PCP
 	       GETFLAG(ENABLENATPMPMASK) ? " NAT-PMP/PCP " : " ",
@@ -2583,9 +2583,6 @@ main(int argc, char * * argv)
 			}
 #endif
 			should_send_public_address_change_notif = 0;
-#ifdef ENABLE_LEASEFILE
-			reload_from_lease_file();
-#endif
 		}
 		/* Check if we need to send SSDP NOTIFY messages and do it if
 		 * needed */
@@ -2832,7 +2829,7 @@ main(int argc, char * * argv)
 		}
 		i = try_sendto(&writeset);
 		if(i < 0) {
-			syslog(LOG_DEBUG, "try_sendto failed to send %d packets", -i);
+			syslog(LOG_ERR, "try_sendto failed to send %d packets", -i);
 		}
 #ifdef USE_MINIUPNPDCTL
 		for(ectl = ctllisthead.lh_first; ectl;)
@@ -2932,7 +2929,7 @@ main(int argc, char * * argv)
 					if(lan_addr == NULL) {
 						char sender_str[64];
 						sockaddr_to_string((struct sockaddr *)&senderaddr, sender_str, sizeof(sender_str));
-						syslog(LOG_DEBUG, "NAT-PMP packet sender %s not from a LAN, ignoring",
+						syslog(LOG_WARNING, "NAT-PMP packet sender %s not from a LAN, ignoring",
 						       sender_str);
 						continue;
 					}
@@ -2955,7 +2952,7 @@ main(int argc, char * * argv)
 				if(lan_addr == NULL) {
 					char sender_str[64];
 					sockaddr_to_string((struct sockaddr *)&senderaddr, sender_str, sizeof(sender_str));
-					syslog(LOG_DEBUG, "NAT-PMP packet sender %s not from a LAN, ignoring",
+					syslog(LOG_WARNING, "NAT-PMP packet sender %s not from a LAN, ignoring",
 					       sender_str);
 					continue;
 				}
@@ -3104,7 +3101,7 @@ shutdown:
 		if(SendSSDPGoodbye(snotify, addr_count * 2) < 0)
 #endif
 		{
-			syslog(LOG_DEBUG, "Failed to broadcast good-bye notifications");
+			syslog(LOG_ERR, "Failed to broadcast good-bye notifications");
 		}
 	}
 	/* try to send pending packets */

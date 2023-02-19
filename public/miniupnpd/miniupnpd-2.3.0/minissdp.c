@@ -197,12 +197,10 @@ OpenAndConfSSDPReceiveSocket(int ipv6)
 	{
 		syslog(LOG_WARNING, "setsockopt(udp, SO_REUSEADDR): %m");
 	}
-/*
 	if (setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)) < 0)
 	{
 		syslog(LOG_WARNING, "setsockopt(udp, SO_REUSEPORT): %m");
 	}
-*/
 #ifdef IP_RECVIF
 	/* BSD */
 	if(!ipv6) {
@@ -598,7 +596,7 @@ SendSSDPResponse(int s, const struct sockaddr * addr,
 	       n, addr_str, l, buf);
 	if(n < 0)
 	{
-		syslog(LOG_DEBUG, "%s: sendto(udp): %m",
+		syslog(LOG_ERR, "%s: sendto(udp): %m",
 		       "SendSSDPResponse()");
 	}
 }
@@ -712,7 +710,7 @@ SendSSDPNotify(int s, const struct sockaddr * dest, socklen_t dest_len,
 	}
 	n = sendto_or_schedule(s, bufr, l, 0, dest, dest_len);
 	if(n < 0) {
-		syslog(LOG_DEBUG, "sendto(udp_notify=%d, %s): %m", s,
+		syslog(LOG_ERR, "sendto(udp_notify=%d, %s): %m", s,
 		       host ? host : "NULL");
 	} else if(n != l) {
 		syslog(LOG_NOTICE, "sendto() sent %d out of %d bytes", n, l);
@@ -1017,7 +1015,7 @@ ProcessSSDPData(int s, const char *bufr, int n,
 			if(lan_addr->index != (unsigned)source_if && lan_addr->index != 0)
 #endif
 			{
-				syslog(LOG_DEBUG, "interface index not matching %u != %d", lan_addr->index, source_if);
+				syslog(LOG_WARNING, "interface index not matching %u != %d", lan_addr->index, source_if);
 			}
 		}
 		else
@@ -1034,7 +1032,7 @@ ProcessSSDPData(int s, const char *bufr, int n,
 	}
 	if(lan_addr == NULL)
 	{
-		syslog(LOG_DEBUG, "SSDP packet sender %s (if_index=%d) not from a LAN, ignoring",
+		syslog(LOG_WARNING, "SSDP packet sender %s (if_index=%d) not from a LAN, ignoring",
 		       sender_str, source_if);
 		return;
 	}
@@ -1150,7 +1148,7 @@ ProcessSSDPData(int s, const char *bufr, int n,
 			{
 				if (lan_addr == NULL)
 				{
-					syslog(LOG_INFO,
+					syslog(LOG_ERR,
 					       "Can't find in which sub network the client %s is",
 					       sender_str);
 					return;
@@ -1361,7 +1359,7 @@ ProcessSSDPData(int s, const char *bufr, int n,
 	}
 	else
 	{
-		syslog(LOG_DEBUG, "Unknown udp packet received from %s", sender_str);
+		syslog(LOG_NOTICE, "Unknown udp packet received from %s", sender_str);
 	}
 }
 
@@ -1405,7 +1403,7 @@ SendSSDPbyebye(int s, const struct sockaddr * dest, socklen_t destlen,
 	n = sendto_or_schedule(s, bufr, l, 0, dest, destlen);
 	if(n < 0)
 	{
-		syslog(LOG_DEBUG, "sendto(udp_shutdown=%d): %m", s);
+		syslog(LOG_ERR, "sendto(udp_shutdown=%d): %m", s);
 		return -1;
 	}
 	else if(n != l)

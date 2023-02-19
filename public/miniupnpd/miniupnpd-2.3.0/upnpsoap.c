@@ -343,7 +343,7 @@ GetExternalIPAddress(struct upnphttp * h, const char * action, const char * ns)
 		struct in_addr addr;
 		if(getifaddr(ext_if_name, ext_ip_addr, INET_ADDRSTRLEN, &addr, NULL) < 0)
 		{
-			syslog(LOG_DEBUG, "Failed to get ip address for interface %s",
+			syslog(LOG_ERR, "Failed to get ip address for interface %s",
 				ext_if_name);
 			ext_ip_addr[0] = '\0';
 		} else if (addr_is_reserved(&addr)) {
@@ -464,7 +464,7 @@ AddPortMapping(struct upnphttp * h, const char * action, const char * ns)
 		}
 		else
 		{
-			syslog(LOG_DEBUG, "Failed to convert hostname '%s' to ip address", int_ip);
+			syslog(LOG_ERR, "Failed to convert hostname '%s' to ip address", int_ip);
 			ClearNameValueList(&data);
 			SoapError(h, 402, "Invalid Args");
 			return;
@@ -659,7 +659,7 @@ AddAnyPortMapping(struct upnphttp * h, const char * action, const char * ns)
 		}
 		else
 		{
-			syslog(LOG_DEBUG, "Failed to convert hostname '%s' to ip address", int_ip);
+			syslog(LOG_ERR, "Failed to convert hostname '%s' to ip address", int_ip);
 			ClearNameValueList(&data);
 			SoapError(h, 402, "Invalid Args");
 			return;
@@ -1455,7 +1455,7 @@ QueryStateVariable(struct upnphttp * h, const char * action, const char * ns)
 	}
 	else
 	{
-		syslog(LOG_DEBUG, "%s: Unknown: %s", action, var_name?var_name:"");
+		syslog(LOG_NOTICE, "%s: Unknown: %s", action, var_name?var_name:"");
 		SoapError(h, 404, "Invalid Var");
 	}
 
@@ -1602,7 +1602,7 @@ PinholeVerification(struct upnphttp * h, char * int_ip, unsigned short int_port)
 		}
 		else
 		{
-			syslog(LOG_DEBUG, "Failed to convert hostname '%s' to IP address : %s",
+			syslog(LOG_WARNING, "Failed to convert hostname '%s' to IP address : %s",
 			       int_ip, gai_strerror(n));
 			SoapError(h, 402, "Invalid Args");
 			return -1;
@@ -2342,9 +2342,9 @@ ExecuteSoapAction(struct upnphttp * h, const char * action, int n)
 				return;
 			}
 		}
-		syslog(LOG_DEBUG, "SoapMethod: Unknown: %.*s %s", methodlen, p, namespace);
+		syslog(LOG_NOTICE, "SoapMethod: Unknown: %.*s %s", methodlen, p, namespace);
 	} else {
-		syslog(LOG_DEBUG, "cannot parse SoapAction");
+		syslog(LOG_NOTICE, "cannot parse SoapAction");
 	}
 
 	SoapError(h, 401, "Invalid Action");
@@ -2392,7 +2392,7 @@ SoapError(struct upnphttp * h, int errCode, const char * errDesc)
 	char body[2048];
 	int bodylen;
 
-	syslog(LOG_DEBUG, "Returning UPnPError %d: %s", errCode, errDesc);
+	syslog(LOG_INFO, "Returning UPnPError %d: %s", errCode, errDesc);
 	bodylen = snprintf(body, sizeof(body), resp, errCode, errDesc);
 	BuildResp2_upnphttp(h, 500, "Internal Server Error", body, bodylen);
 	SendRespAndClose_upnphttp(h);
