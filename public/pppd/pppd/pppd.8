@@ -455,11 +455,8 @@ parameter to those scripts.
 .TP
 .B ipv6cp\-accept\-local
 With this option, pppd will accept the peer's idea of our local IPv6
-address, even if the local IPv6 address was specified in an option.
-.TP
-.B ipv6cp\-accept\-remote
-With this option, pppd will accept the peer's idea of its (remote) IPv6
-address, even if the remote IPv6 address was specified in an option.
+interface identifier, even if the local IPv6 interface identifier
+was specified in an option.
 .TP
 .B ipv6cp\-max\-configure \fIn
 Set the maximum number of IPv6CP configure-request transmissions to
@@ -561,11 +558,6 @@ to 1) if the \fIproxyarp\fR option is used, and will enable the
 dynamic IP address option (i.e. set /proc/sys/net/ipv4/ip_dynaddr to
 1) in demand mode if the local address changes.
 .TP
-.B lcp\-echo\-adaptive
-If this option is used with the \fIlcp\-echo\-failure\fR option then
-pppd will send LCP echo\-request frames only if no traffic was received
-from the peer since the last echo\-request was sent.
-.TP
 .B lcp\-echo\-failure \fIn
 If this option is given, pppd will presume the peer to be dead
 if \fIn\fR LCP echo\-requests are sent without receiving a valid LCP
@@ -649,9 +641,6 @@ network control protocol comes up).
 Terminate after \fIn\fR consecutive failed connection attempts.  A
 value of 0 means no limit.  The default value is 10.
 .TP
-.B minunit \fInum
-PPP interface minimal unit number. Such as unit, but always select bigger interface
-.TP
 .B modem
 Use the modem control lines.  This option is the default.  With this
 option, pppd will wait for the CD (Carrier Detect) signal from the
@@ -665,9 +654,6 @@ control, as for the \fIcrtscts\fR option.  This is the opposite of the
 .B mp
 Enables the use of PPP multilink; this is an alias for the `multilink'
 option.  This option is currently only available under Linux.
-.TP
-.B mppc
-Enables MPPC (Microsoft Point to Point Compression).  This is the default.
 .TP
 .B mppe\-stateful
 Allow MPPE to use stateful mode.  Stateless mode is still attempted first.
@@ -809,17 +795,11 @@ peer is buggy.
 Disables the use of PPP multilink.  This option is currently only
 available under Linux.
 .TP
-.B nomppc
-Disables MPPC (Microsoft Point to Point Compression).
-.TP
 .B nomppe
 Disables MPPE (Microsoft Point to Point Encryption).  This is the default.
 .TP
 .B nomppe\-40
 Disable 40-bit encryption with MPPE.
-.TP
-.B nomppe\-56
-Disable 56\-bit encryption with MPPE.
 .TP
 .B nomppe\-128
 Disable 128-bit encryption with MPPE.
@@ -1029,9 +1009,6 @@ kernel has been configured to include MPPE support.
 .B require\-mppe\-40
 Require the use of MPPE, with 40-bit encryption.
 .TP
-.B require\-mppe\-56
-Require the use of MPPE, with 56\-bit encryption.
-.TP
 .B require\-mppe\-128
 Require the use of MPPE, with 128-bit encryption.
 .TP
@@ -1124,12 +1101,6 @@ environment variables DNS1 and DNS2, and the environment variable
 USEPEERDNS will be set to 1.  In addition, pppd will create an
 /etc/ppp/resolv.conf file containing one or two nameserver lines with
 the address(es) supplied by the peer.
-.TP
-.B usepeerwins
-Ask the peer for up to 2 WINS server addresses.  The addresses supplied
-by the peer (if any) are passed to the /etc/ppp/ip\-up script in the
-environment variables WINS1 and WINS2, and the environment variable
-USEPEERWINS will be set to 1.
 .TP
 .B user \fIname
 Sets the name used for authenticating the local system to the peer to
@@ -1672,20 +1643,13 @@ The logical name of the link, set with the \fIlinkname\fR option.
 .TP
 .B DNS1
 If the peer supplies DNS server addresses, this variable is set to the
-first DNS server address supplied.
+first DNS server address supplied (whether or not the usepeerdns
+option was given).
 .TP
 .B DNS2
 If the peer supplies DNS server addresses, this variable is set to the
-second DNS server address supplied.
-.TP
-.B WINS1
-If the peer supplies WINS server addresses, this variable is set to the
-first WINS server address supplied.
-.TP
-.B WINS2
-If the peer supplies WINS server addresses, this variable is set to the
-second WINS server address supplied.
-.P
+second DNS server address supplied (whether or not the usepeerdns
+option was given).
 .P
 Pppd invokes the following scripts, if they exist.  It is not an error
 if they don't exist.

@@ -35,7 +35,6 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 #include <signal.h>
 #include <linux/version.h>
 #include <linux/sockios.h>
@@ -118,8 +117,14 @@ static option_t pppol2tp_options[] = {
 
 static int setdevname_pppol2tp(char **argv)
 {
-	struct sockaddr_pppol2tp sax;
-	int len = sizeof(sax);
+	union {
+		char buffer[128];
+		struct sockaddr pppol2tp;
+	} s;
+	int len = sizeof(s);
+	char **a;
+	int tmp;
+	int tmp_len = sizeof(tmp);
 
 	if (device_got_set)
 		return 0;
@@ -127,21 +132,21 @@ static int setdevname_pppol2tp(char **argv)
 	if (!int_option(*argv, &pppol2tp_fd))
 		return 0;
 
-	if(getsockname(pppol2tp_fd, (struct sockaddr *)&sax, &len) < 0) {
+	if(getsockname(pppol2tp_fd, (struct sockaddr *)&s, &len) < 0) {
 		fatal("Given FD for PPPoL2TP socket invalid (%s)",
 		      strerror(errno));
 	}
-	if(sax.sa_family != AF_PPPOX || sax.sa_protocol != PX_PROTO_OL2TP) {
-		fatal("Socket is not a PPPoL2TP socket");
+	if(s.pppol2tp.sa_family != AF_PPPOX) {
+		fatal("Socket of not a PPPoX socket");
 	}
 
 	/* Do a test getsockopt() to ensure that the kernel has the necessary
 	 * feature available.
-	 * driver returns -ENOTCONN until session established!
+	 */
 	if (getsockopt(pppol2tp_fd, SOL_PPPOL2TP, PPPOL2TP_SO_DEBUG,
 		       &tmp, &tmp_len) < 0) {
 		fatal("PPPoL2TP kernel driver not installed");
-	} */
+	}
 
 	/* Setup option defaults. Compression options are disabled! */
 
@@ -170,15 +175,9 @@ static int setdevname_pppol2tp(char **argv)
 
 static int connect_pppol2tp(void)
 {
-	struct sockaddr_pppol2tp sax;
-	int len = sizeof(sax);
-
 	if(pppol2tp_fd == -1) {
 		fatal("No PPPoL2TP FD specified");
 	}
-
-	getsockname(pppol2tp_fd, (struct sockaddr *)&sax, &len);
-	sprintf(ppp_devnam,"l2tp (%s)",inet_ntoa(sax.pppol2tp.addr.sin_addr));
 
 	return pppol2tp_fd;
 }
@@ -229,9 +228,6 @@ static void send_config_pppol2tp(int mtu,
 	}
 	netif_set_mtu(ifunit, mtu);
 
-	if (pppol2tp_fd < 0)
-		return;
-
 	reorderto[0] = '\0';
 	if (pppol2tp_reorder_timeout > 0)
 		sprintf(&reorderto[0], "%d ", pppol2tp_reorder_timeout);
@@ -279,9 +275,6 @@ static void recv_config_pppol2tp(int mru,
 			      int pcomp,
 			      int accomp)
 {
-	if (pppol2tp_fd < 0)
-		return;
-
 	if ((lcp_allowoptions[0].mru > 0) && (mru > lcp_allowoptions[0].mru)) {
 		warn("Overriding mru %d to mtu value %d", mru,
 		     lcp_allowoptions[0].mru);
@@ -508,10 +501,8 @@ void plugin_init(void)
 	 */
 	add_notifier(&ip_up_notifier, pppol2tp_ip_up, NULL);
 	add_notifier(&ip_down_notifier, pppol2tp_ip_down, NULL);
-#ifdef INET6
 	add_notifier(&ipv6_up_notifier, pppol2tp_ip_up, NULL);
 	add_notifier(&ipv6_down_notifier, pppol2tp_ip_down, NULL);
-#endif
 }
 
 struct channel pppol2tp_channel = {

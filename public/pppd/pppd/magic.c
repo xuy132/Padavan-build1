@@ -53,8 +53,8 @@
 
 static const char rcsid[] = RCSID;
 
-extern long mrand48 (void);
-extern void srand48 (long);
+extern long mrand48 __P((void));
+extern void srand48 __P((long));
 
 /*
  * magic_init - Initialize the magic number generator.
@@ -64,7 +64,7 @@ extern void srand48 (long);
  * and current time, currently.
  */
 void
-magic_init(void)
+magic_init()
 {
     long seed;
     struct timeval t;
@@ -78,7 +78,7 @@ magic_init(void)
  * magic - Returns the next magic number.
  */
 u_int32_t
-magic(void)
+magic()
 {
     return (u_int32_t) mrand48();
 }
@@ -102,19 +102,20 @@ random_bytes(unsigned char *buf, int len)
  */
 
 double
-drand48(void)
+drand48()
 {
     return (double)random() / (double)0x7fffffffL; /* 2**31-1 */
 }
 
 long
-mrand48(void)
+mrand48()
 {
     return random();
 }
 
 void
-srand48(long seedval)
+srand48(seedval)
+long seedval;
 {
     srandom((int)seedval);
 }

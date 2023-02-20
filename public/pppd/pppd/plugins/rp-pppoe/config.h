@@ -1,6 +1,5 @@
-/* config.h.  Generated from config.h.in by configure.  */
+/* config.h.  Generated automatically by configure.  */
 /* config.h.in.  Generated automatically from configure.in by autoheader.  */
-/* LIC: GPL */
 
 /* Define to empty if the keyword does not work.  */
 /* #undef const */
@@ -73,7 +72,7 @@
 #define HAVE_LINUX_IF_PPPOX_H 1
 
 /* Define if you have the <net/bpf.h> header file.  */
-/* #undef HAVE_NET_BPF_H */
+#define HAVE_NET_BPF_H 1
 
 /* Define if you have the <net/if_arp.h> header file.  */
 #define HAVE_NET_IF_ARP_H 1
@@ -102,6 +101,9 @@
 /* Define if you have the <netpacket/packet.h> header file.  */
 #define HAVE_NETPACKET_PACKET_H 1
 
+/* Define if you have the <sys/cdefs.h> header file.  */
+#define HAVE_SYS_CDEFS_H 1
+
 /* Define if you have the <sys/dlpi.h> header file.  */
 /* #undef HAVE_SYS_DLPI_H */
 
@@ -127,15 +129,4 @@
 #define HAVE_UNISTD_H 1
 
 /* Define if you have the N_HDLC line discipline in linux/termios.h */
-/* #undef HAVE_N_HDLC */
-
-/* Define if bitfields are packed in reverse order */
-#define PACK_BITFIELDS_REVERSED 1
-
-/* Define to include debugging code */
-/* #undef DEBUGGING_ENABLED */
-
-/* Solaris moans if we don't do this... */
-#ifdef __sun
-#define __EXTENSIONS__ 1
-#endif
+#define HAVE_N_HDLC 1

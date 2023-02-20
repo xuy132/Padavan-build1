@@ -267,7 +267,7 @@ void mp_bundle_terminated()
 	notice("Connection terminated.");
 	print_link_stats();
 	if (!demand) {
-		remove_pidfiles(1);
+		remove_pidfiles();
 		script_unsetenv("IFNAME");
 	}
 

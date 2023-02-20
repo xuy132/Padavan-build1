@@ -73,12 +73,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/errno.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
 #include <sys/sysmacros.h>
 
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <syslog.h>
@@ -102,7 +102,7 @@
 #define MAX_ADDR_LEN 7
 #endif
 
-#if !defined(__GLIBC__) || __GLIBC__ >= 2
+#if __GLIBC__ >= 2
 #include <asm/types.h>		/* glibc 2 conflicts with linux/types.h */
 #include <net/if.h>
 #include <net/if_arp.h>
@@ -458,13 +458,6 @@ int generic_establish_ppp (int fd)
     if (new_style_driver) {
 	int flags;
 
-        /* if a ppp_fd is already open, close it first */
-        if(ppp_fd > 0) {
-          close(ppp_fd);
-          remove_fd(ppp_fd);
-          ppp_fd = -1;
-        }
-
 	/* Open an instance of /dev/ppp and connect the channel to it */
 	if (ioctl(fd, PPPIOCGCHAN, &chindex) == -1) {
 	    error("Couldn't get channel number: %m");
@@ -639,15 +632,13 @@ static int make_ppp_unit()
 	    || fcntl(ppp_dev_fd, F_SETFL, flags | O_NONBLOCK) == -1)
 		warn("Couldn't set /dev/ppp to nonblock: %m");
 
-	ifunit = (req_unit >= 0) ? req_unit : req_minunit;
-	do {
+	ifunit = req_unit;
+	x = ioctl(ppp_dev_fd, PPPIOCNEWUNIT, &ifunit);
+	if (x < 0 && req_unit >= 0 && errno == EEXIST) {
+		warn("Couldn't allocate PPP unit %d as it is already in use", req_unit);
+		ifunit = -1;
 		x = ioctl(ppp_dev_fd, PPPIOCNEWUNIT, &ifunit);
-		if (x < 0 && errno == EEXIST) {
-			warn("Couldn't allocate PPP unit %d as it is already in use", ifunit);
-			ifunit = (req_unit >= 0) ? -1 : ++req_minunit;
-		} else break;
-	} while (ifunit < MAXUNIT);
-
+	}
 	if (x < 0)
 		error("Couldn't create new ppp unit: %m");
 	return x;
@@ -2151,6 +2142,7 @@ int ppp_available(void)
 		}
 	    }
 
+	    close (s);
 	    if (!ok) {
 		slprintf(route_buffer, sizeof(route_buffer),
 			 "Sorry - PPP driver version %d.%d.%d is out of date\n",
@@ -2160,7 +2152,6 @@ int ppp_available(void)
 	    }
 	}
     }
-    close(s);
     return ok;
 }
 
@@ -2172,7 +2163,6 @@ int ppp_available(void)
 
 void logwtmp (const char *line, const char *name, const char *host)
 {
-#if 0
     struct utmp ut, *utp;
     pid_t  mypid = getpid();
 #if __GLIBC__ < 2
@@ -2237,7 +2227,6 @@ void logwtmp (const char *line, const char *name, const char *host)
 
 	close (wtmp);
     }
-#endif
 #endif
 }
 #endif /* HAVE_LOGWTMP */
@@ -2639,10 +2628,7 @@ get_pty(master_fdp, slave_fdp, slave_name, uid)
 		warn("Couldn't unlock pty slave %s: %m", pty_name);
 #endif
 	    if ((sfd = open(pty_name, O_RDWR | O_NOCTTY)) < 0)
-	    {
 		warn("Couldn't open pty slave %s: %m", pty_name);
-		close(mfd);
-	    }
 	}
     }
 #endif /* TIOCGPTN */

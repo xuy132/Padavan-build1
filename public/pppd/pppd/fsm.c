@@ -70,6 +70,7 @@ static void fsm_sconfreq __P((fsm *, int));
 
 int peer_mru[NUM_PPP];
 
+
 /*
  * fsm_init - Initialize fsm.
  *
@@ -467,7 +468,7 @@ fsm_rconfreq(f, id, inp, len)
 	f->nakloops = 0;
 
     } else {
-	/* we sent CONFNAK or CONFREJ */
+	/* we sent CONFACK or CONFREJ */
 	if (f->state != ACKRCVD)
 	    f->state = REQSENT;
 	if( code == CONFNAK )

@@ -11,7 +11,7 @@
 # This program may be distributed according to the terms of the GNU
 # General Public License, version 2 or (at your option) any later version.
 #
-# $Id$
+# $Id: Makefile.linux,v 1.8 2008/06/09 08:34:23 paulus Exp $
 #***********************************************************************
 
 DESTDIR = $(INSTROOT)@DESTDIR@
@@ -23,27 +23,42 @@ PPPDVERSION = $(shell awk -F '"' '/VERSION/ { print $$2; }' ../../patchlevel.h)
 INSTALL	= install
 
 # Version is set ONLY IN THE MAKEFILE!  Don't delete this!
-RP_VERSION=3.12
+RP_VERSION=3.8p
 
 COPTS=-O2 -g
-CFLAGS=$(COPTS) -I../../../include '-DRP_VERSION="$(RP_VERSION)"' -DPLUGIN=1
-all: rp-pppoe.so
+CFLAGS=$(COPTS) -I../../../include '-DRP_VERSION="$(RP_VERSION)"'
+all: rp-pppoe.so pppoe-discovery
 
-rp-pppoe.so: libplugin.a plugin.o
-	$(LD) -o rp-pppoe.so -shared plugin.o libplugin.a
+pppoe-discovery: pppoe-discovery.o debug.o
+	$(CC) -o pppoe-discovery pppoe-discovery.o debug.o
+
+pppoe-discovery.o: pppoe-discovery.c
+	$(CC) $(CFLAGS) -c -o pppoe-discovery.o pppoe-discovery.c
+
+debug.o: debug.c
+	$(CC) $(CFLAGS) -c -o debug.o debug.c
+
+rp-pppoe.so: plugin.o discovery.o if.o common.o
+	$(CC) -o rp-pppoe.so -shared plugin.o discovery.o if.o common.o
 
 install: all
 	$(INSTALL) -d -m 755 $(LIBDIR)
 	$(INSTALL) -s -c -m 4550 rp-pppoe.so $(LIBDIR)
+	$(INSTALL) -d -m 755 $(BINDIR)
+	$(INSTALL) -s -c -m 555 pppoe-discovery $(BINDIR)
 
 clean:
-	rm -f *.o *.so *.a
+	rm -f *.o *.so pppoe-discovery
 
 plugin.o: plugin.c
-	$(CC) $(CFLAGS) -I../../.. -c -o $@ -fPIC plugin.c
+	$(CC) $(CFLAGS) -I../../.. -c -o plugin.o -fPIC plugin.c
 
-libplugin.a: discovery.o if.o common.o debug.o
-	$(AR) -rc $@ $^
+discovery.o: discovery.c
+	$(CC) $(CFLAGS) -I../../.. -c -o discovery.o -fPIC discovery.c
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ -fPIC $^
+if.o: if.c
+	$(CC) $(CFLAGS) -I../../.. -c -o if.o -fPIC if.c
+
+common.o: common.c
+	$(CC) $(CFLAGS) -I../../.. -c -o common.o -fPIC common.c
+

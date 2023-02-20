@@ -240,7 +240,6 @@ bool explicit_passwd = 0;	/* Set if "password" option supplied */
 char remote_name[MAXNAMELEN];	/* Peer's name for authentication */
 
 static char *uafname;		/* name of most recent +ua file */
-static char *path_chapfile = _PATH_CHAPFILE;	/* pathname of chap-secrets file */
 
 extern char *crypt __P((const char *, const char *));
 
@@ -402,9 +401,6 @@ option_t auth_options[] = {
       "Set telephone number(s) which are allowed to connect",
       OPT_PRIV | OPT_A2LIST },
 
-    { "chap-secrets", o_string, &path_chapfile,
-      "Set pathname of chap-secrets file", OPT_PRIO },
-
     { NULL }
 };
 
@@ -430,7 +426,6 @@ setupapfile(argv)
     euid = geteuid();
     if (seteuid(getuid()) == -1) {
 	option_error("unable to reset uid before opening %s: %m", fname);
-        free(fname);
 	return 0;
     }
     ufile = fopen(fname, "r");
@@ -438,7 +433,6 @@ setupapfile(argv)
 	fatal("unable to regain privileges: %m");
     if (ufile == NULL) {
 	option_error("unable to open user login data file %s", fname);
-        free(fname);
 	return 0;
     }
     check_access(ufile, fname);
@@ -449,7 +443,6 @@ setupapfile(argv)
 	|| fgets(p, MAXSECRETLEN - 1, ufile) == NULL) {
 	fclose(ufile);
 	option_error("unable to read user login data file %s", fname);
-        free(fname);
 	return 0;
     }
     fclose(ufile);
@@ -471,7 +464,6 @@ setupapfile(argv)
 	explicit_passwd = 1;
     }
 
-    free(fname);
     return (1);
 }
 
@@ -561,9 +553,6 @@ link_required(unit)
 void start_link(unit)
     int unit;
 {
-     /* we are called via link_terminated, must be ignored */
-    if (phase == PHASE_DISCONNECT)
-	return;
     status = EXIT_CONNECT_FAILED;
     new_phase(PHASE_SERIALCONN);
 
@@ -645,7 +634,7 @@ link_terminated(unit)
      * we delete its pid file.
      */
     if (!doing_multilink && !demand)
-	remove_pidfiles(1);
+	remove_pidfiles();
 
     /*
      * If we may want to bring the link up again, transfer
@@ -673,7 +662,6 @@ link_terminated(unit)
 	the_channel->disconnect();
 	devfd = -1;
     }
-    /* not only disconnect, cleanup should also be called to close the devices */
     if (the_channel->cleanup)
 	(*the_channel->cleanup)();
 
@@ -1200,10 +1188,6 @@ check_idle(arg)
     if (idle_time_hook != 0) {
 	tlim = idle_time_hook(&idle);
     } else {
-/* JYWeng 20031216: replace itime with idle.xmit_idle for only outgoing traffic is counted*/
-	if(tx_only) 
-		itime = idle.xmit_idle;
-	else
 	itime = MIN(idle.xmit_idle, idle.recv_idle);
 	tlim = idle_time_limit - itime;
     }
@@ -1657,7 +1641,7 @@ have_chap_secret(client, server, need_ip, lacks_ipp)
 	}
     }
 
-    filename = path_chapfile;
+    filename = _PATH_CHAPFILE;
     f = fopen(filename, "r");
     if (f == NULL)
 	return 0;
@@ -1752,7 +1736,7 @@ get_secret(unit, client, server, secret, secret_len, am_server)
 	    return 0;
 	}
     } else {
-	filename = path_chapfile;
+	filename = _PATH_CHAPFILE;
 	addrs = NULL;
 	secbuf[0] = 0;
 
@@ -2371,8 +2355,7 @@ auth_script(script)
     argv[3] = user_name;
     argv[4] = devnam;
     argv[5] = strspeed;
-    argv[6] = ipparam;
-    argv[7] = NULL;
+    argv[6] = NULL;
 
     auth_script_pid = run_program(script, argv, 0, auth_script_done, NULL, 0);
 }

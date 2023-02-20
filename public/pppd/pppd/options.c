@@ -78,7 +78,6 @@
 #if defined(ultrix) || defined(NeXT)
 char *strdup __P((char *));
 #endif
-bool tx_only;			/* JYWeng 20031216: idle time counting on tx traffic */
 
 static const char rcsid[] = RCSID;
 
@@ -115,14 +114,12 @@ char	linkname[MAXPATHLEN];	/* logical name for link */
 bool	tune_kernel;		/* may alter kernel settings */
 int	connect_delay = 1000;	/* wait this many ms after connect script */
 int	req_unit = -1;		/* requested interface unit */
-int	req_minunit = -1;	/* requested minimal interface unit */
 bool	multilink = 0;		/* Enable multilink operation */
 char	*bundle_name = NULL;	/* bundle name for multilink */
 bool	dump_options;		/* print out option values */
 bool	dryrun;			/* print out option values and exit */
 char	*domain;		/* domain name set by domain option */
 int	child_wait = 5;		/* # seconds to wait for children at exit */
-int	npppd = 0;		/* synchronize between multiple pppd */
 struct userenv *userenv_list;	/* user environment variables */
 
 #ifdef MAXOCTETS
@@ -285,9 +282,6 @@ option_t general_options[] = {
     { "unit", o_int, &req_unit,
       "PPP interface unit number to use if possible",
       OPT_PRIO | OPT_LLIMIT, 0, 0 },
-    { "minunit", o_int, &req_minunit,
-      "PPP interface minimal unit number",
-      OPT_PRIO | OPT_LLIMIT, 0, 0 },
 
     { "dump", o_bool, &dump_options,
       "Print out option values after parsing all options", 1 },
@@ -304,8 +298,6 @@ option_t general_options[] = {
     { "unset", o_special, (void *)user_unsetenv,
       "Unset user environment variable",
       OPT_A2PRINTER | OPT_NOPRINT, (void *)user_unsetprint },
-    { "syncppp", o_int, &npppd,
-      "sync among multiple pppd when sending chap/pap respond", OPT_PRIO },
 
 #ifdef HAVE_MULTILINK
     { "multilink", o_bool, &multilink,
@@ -346,10 +338,6 @@ option_t general_options[] = {
     { "mo-timeout", o_int, &maxoctets_timeout,
       "Check for traffic limit every N seconds", OPT_PRIO | OPT_LLIMIT | 1 },
 #endif
-
-/* JYWeng 20031216: add for tx_only option*/
-    { "tx_only", o_bool, &tx_only,
-      "set idle time counting on tx_only or not", 1 },
 
     { NULL }
 };
@@ -792,7 +780,7 @@ process_option(opt, cmd, argv)
 	    sv = strdup(*argv);
 	    if (sv == NULL)
 		novm("option argument");
-	    if (*optptr && opt->source)
+	    if (*optptr)
 		free(*optptr);
 	    *optptr = sv;
 	}
@@ -986,7 +974,7 @@ print_option(opt, mainopt, printer, arg)
 			p = (char *) opt->addr2;
 			if ((opt->flags & OPT_STATIC) == 0)
 				p = *(char **)p;
-			printer(arg, "%q", p);
+			printer("%q", p);
 		} else if (opt->flags & OPT_A2LIST) {
 			struct option_value *ovp;
 
@@ -1352,7 +1340,6 @@ getword(f, word, newlinep, filename)
 
 	c = getc(f);
     }
-    word[MAXWORDLEN-1] = 0;	/* make sure word is null-terminated */
 
     /*
      * End of the word: check for errors.
@@ -1748,7 +1735,7 @@ user_unsetenv(argv)
 	option_error("unexpected = in name: %s", arg);
 	return 0;
     }
-    if (*arg == '\0') {
+    if (arg == '\0') {
 	option_error("missing variable name for unset");
 	return 0;
     }

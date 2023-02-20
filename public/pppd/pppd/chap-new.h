@@ -56,8 +56,8 @@
 
 /* bitmask of supported algorithms */
 #define MDTYPE_MICROSOFT_V2	0x1
-#define MDTYPE_MD5		0x2
-#define MDTYPE_MICROSOFT	0x4
+#define MDTYPE_MICROSOFT	0x2
+#define MDTYPE_MD5		0x4
 #define MDTYPE_NONE		0
 
 /* hashes supported by this instance of pppd */
@@ -65,8 +65,8 @@ extern int chap_mdtype_all;
 
 /* Return the digest alg. ID for the most preferred digest type. */
 #define CHAP_DIGEST(mdtype) \
-    ((mdtype) & MDTYPE_MICROSOFT_V2)? CHAP_MICROSOFT_V2: \
     ((mdtype) & MDTYPE_MD5)? CHAP_MD5: \
+    ((mdtype) & MDTYPE_MICROSOFT_V2)? CHAP_MICROSOFT_V2: \
     ((mdtype) & MDTYPE_MICROSOFT)? CHAP_MICROSOFT: \
     0
 
@@ -103,7 +103,8 @@ struct chap_digest_type {
 		unsigned char *challenge, unsigned char *response,
 		char *message, int message_space);
 	void (*make_response)(unsigned char *response, int id, char *our_name,
-		unsigned char *challenge, char *secret, int secret_len);
+		unsigned char *challenge, char *secret, int secret_len,
+		unsigned char *priv);
 	int (*check_success)(int id, unsigned char *pkt, int len);
 	void (*handle_failure)(unsigned char *pkt, int len);
 

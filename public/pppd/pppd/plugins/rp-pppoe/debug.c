@@ -11,17 +11,12 @@
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
 *
-* LIC: GPL
-*
 ***********************************************************************/
 
 static char const RCSID[] =
-"$Id$";
+"$Id: debug.c,v 1.2 2008/06/09 08:34:23 paulus Exp $";
 
 #include "pppoe.h"
-
-#ifdef DEBUGGING_ENABLED
-
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
@@ -148,5 +143,3 @@ dumpPacket(FILE *fp, PPPoEPacket *packet, char const *dir)
 	    (unsigned) packet->ethHdr.h_dest[5]);
     dumpHex(fp, packet->payload, ntohs(packet->length));
 }
-
-#endif /* DEBUGGING_ENABLED */
