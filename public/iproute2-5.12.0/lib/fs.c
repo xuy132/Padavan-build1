@@ -22,7 +22,6 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
-#include <linux/fs.h>
 
 #include "utils.h"
 
