@@ -291,7 +291,7 @@ void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
 	char gws[40] = {0};
 	char srcs[40] = {0};
 	char ifs[16] = {0};
-	//char ms[24] = {0};
+	char ms[24] = {0};
 
 	struct rtmsg *rtp = (struct rtmsg *)NLMSG_DATA(nlp);
 	struct rtattr *rtap = (struct rtattr *)RTM_RTA(rtp);
@@ -367,10 +367,10 @@ void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
 		_routes[r.target].insert(r);
 	}
 
-//#ifdef ZT_NETLINK_TRACE
-//	sprintf(ms, "%d", rtp->rtm_dst_len);
-//	fprintf(stderr, "Route Added: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
-//#endif
+#ifdef ZT_NETLINK_TRACE
+	sprintf(ms, "%d", rtp->rtm_dst_len);
+	fprintf(stderr, "Route Added: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
+#endif
 }
 
 void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
@@ -379,7 +379,7 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 	char gws[40] = {0};
 	char srcs[40] = {0};
 	char ifs[16] = {0};
-	//char ms[24] = {0};
+	char ms[24] = {0};
 
 	struct rtmsg *rtp = (struct rtmsg *) NLMSG_DATA(nlp);
 	struct rtattr *rtap = (struct rtattr *)RTM_RTA(rtp);
@@ -455,10 +455,10 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 		_routes[r.target].erase(r);
 	}
 
-//#ifdef ZT_NETLINK_TRACE
-//	sprintf(ms, "%d", rtp->rtm_dst_len);
-//	fprintf(stderr, "Route Deleted: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
-//#endif
+#ifdef ZT_NETLINK_TRACE
+	sprintf(ms, "%d", rtp->rtm_dst_len);
+	fprintf(stderr, "Route Deleted: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
+#endif
 }
 
 void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)

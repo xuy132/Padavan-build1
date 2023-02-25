@@ -25,7 +25,6 @@ SOFTWARE.
 #ifndef INCLUDE_INJA_INJA_HPP_
 #define INCLUDE_INJA_INJA_HPP_
 
-#include <stddef.h>
 #include <nlohmann/json.hpp>
 
 namespace inja {
@@ -2457,7 +2456,7 @@ class Renderer : public NodeVisitor {
     case Op::Round: {
       const auto args = get_arguments<2>(node);
       const int precision = args[1]->get<int>();
-      const double result = round(args[0]->get<double>() * std::pow(10.0, precision)) / std::pow(10.0, precision);
+      const double result = std::round(args[0]->get<double>() * std::pow(10.0, precision)) / std::pow(10.0, precision);
       if (precision == 0) {
         make_result(int(result));
       } else {
