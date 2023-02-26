@@ -265,7 +265,7 @@ ipset_print_ip(char *buf, unsigned int len,
 	assert(buf);
 	assert(len > 0);
 	assert(data);
-	assert(opt == IPSET_OPT_IP || opt == IPSET_OPT_IP2 || opt == IPSET_OPT_BITMASK);
+	assert(opt == IPSET_OPT_IP || opt == IPSET_OPT_IP2);
 
 	D("len: %u", len);
 	family = ipset_data_family(data);
@@ -976,7 +976,6 @@ ipset_print_data(char *buf, unsigned int len,
 		size = ipset_print_elem(buf, len, data, opt, env);
 		break;
 	case IPSET_OPT_IP:
-	case IPSET_OPT_BITMASK:
 		size = ipset_print_ip(buf, len, data, opt, env);
 		break;
 	case IPSET_OPT_PORT:

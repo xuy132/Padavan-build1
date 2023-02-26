@@ -62,11 +62,6 @@
 #@HAVE_KVZALLOC@ HAVE_KVZALLOC
 #@HAVE_GFP_KERNEL_ACCOUNT@ HAVE_GFP_KERNEL_ACCOUNT
 #@HAVE_NLA_STRSCPY@ HAVE_NLA_STRSCPY
-#@HAVE_NFNL_MSG_PUT@ HAVE_NFNL_MSG_PUT
-#@HAVE_NFNL_INFO_IN_NFNL_CALLBACK@ HAVE_NFNL_INFO_IN_NFNL_CALLBACK
-#@HAVE_NFNL_CALLBACK_TYPE@ HAVE_NFNL_CALLBACK_TYPE
-#@HAVE_EAGAIN_IN_NFNETLINK_UNICAST@ HAVE_EAGAIN_IN_NFNETLINK_UNICAST
-#@HAVE_NLMSG_UNICAST@ HAVE_NLMSG_UNICAST
 
 #ifdef HAVE_EXPORT_SYMBOL_GPL_IN_MODULE_H
 #include <linux/module.h>
@@ -353,44 +348,18 @@ static inline int nla_put_in6_addr(struct sk_buff *skb, int attrtype,
 }
 #endif
 
-#ifdef HAVE_NFNL_INFO_IN_NFNL_CALLBACK
-#define IPSET_CBFN(fn, net, nl, skb, nlh, cda, e, i)	fn(skb, i, cda)
-#define IPSET_CBFN_AD(fn, net, nl, skb, ad, nlh, cda, e, i) fn(net, nl, skb, ad, nlh, cda, i)
-#define IPSET_SOCK_NET(n, ctnl, i)			(i)->net
-#define INFO_NLH(i, n)					(i)->nlh
-#define INFO_NET(i, n)					(i)->net
-#define INFO_SK(i, n)					(i)->sk
-#define CALL_AD(net, ctnl, skb, set, tb, adt, flags, l)	call_ad(net, ctnl, skb, set, tb, adt, flags, l)
-#elif defined(HAVE_PASSING_EXTENDED_ACK_TO_CALLBACKS)
-#define IPSET_CBFN(fn, net, nl, skb, nlh, cda, e, i)	fn(net, nl, skb, nlh, cda, e)
-#define IPSET_CBFN_AD(fn, net, nl, skb, ad, nlh, cda, e, i) fn(net, nl, skb, ad, nlh, cda, e)
-#define IPSET_SOCK_NET(net, ctnl, i)			net
-#define INFO_NLH(i, n)					n
-#define INFO_NET(i, n)					n
-#define INFO_SK(i, n)					n
-#define CALL_AD(net, ctnl, skb, set, tb, adt, flags, l)	call_ad(net, ctnl, skb, set, tb, adt, flags, l)
+#ifdef HAVE_PASSING_EXTENDED_ACK_TO_CALLBACKS
+#define IPSET_CBFN(fn, net, nl, skb, nlh, cda, e)	fn(net, nl, skb, nlh, cda, e)
+#define IPSET_CBFN_AD(fn, net, nl, skb, ad, nlh, cda, e) fn(net, nl, skb, ad, nlh, cda, e)
+#define IPSET_SOCK_NET(net, ctnl)			net
 #elif defined(HAVE_NET_IN_NFNL_CALLBACK_FN)
-#define IPSET_CBFN(fn, net, nl, skb, nlh, cda, e, i)	fn(net, nl, skb, nlh, cda)
-#define IPSET_CBFN_AD(fn, net, nl, skb, ad, nlh, cda, e, i) fn(net, nl, skb, ad, nlh, cda)
-#define IPSET_SOCK_NET(net, ctnl, i)			net
-#define INFO_NLH(i, n)					n
-#define INFO_NET(i, n)					n
-#define INFO_SK(i, n)					n
-#define CALL_AD(net, ctnl, skb, set, tb, adt, flags, l)	call_ad(net, ctnl, skb, set, tb, adt, flags, l)
+#define IPSET_CBFN(fn, net, nl, skb, nlh, cda, e)	fn(net, nl, skb, nlh, cda)
+#define IPSET_CBFN_AD(fn, net, nl, skb, ad, nlh, cda, e) fn(net, nl, skb, ad, nlh, cda)
+#define IPSET_SOCK_NET(net, ctnl)			net
 #else
-#define IPSET_CBFN(fn, net, nl, skb, nlh, cda, e, i)	fn(nl, skb, nlh, cda)
-#define IPSET_CBFN_AD(fn, net, nl, skb, ad, nlh, cda, e, i) fn(nl, skb, ad, nlh, cda)
-#define IPSET_SOCK_NET(net, ctnl, i)			sock_net(ctnl)
-#define INFO_NLH(i, n)					n
-#define INFO_NET(i, n)					n
-#define INFO_SK(i, n)					n
-#define CALL_AD(net, ctnl, skb, set, tb, adt, flags, l)	call_ad(ctnl, skb, set, tb, adt, flags, l)
-#endif
-
-#ifdef HAVE_NFNL_CALLBACK_TYPE
-#define SET_NFNL_CALLBACK_TYPE(t) 	.type = t,
-#else
-#define SET_NFNL_CALLBACK_TYPE(t)
+#define IPSET_CBFN(fn, net, nl, skb, nlh, cda, e)	fn(nl, skb, nlh, cda)
+#define IPSET_CBFN_AD(fn, net, nl, skb, ad, nlh, cda, e) fn(nl, skb, ad, nlh, cda)
+#define IPSET_SOCK_NET(net, ctnl)			sock_net(ctnl)
 #endif
 
 #ifndef HAVE_TC_SKB_PROTOCOL
@@ -406,9 +375,11 @@ static inline int nla_put_in6_addr(struct sk_buff *skb, int attrtype,
 #define skb_vlan_tag_present vlan_tx_tag_present
 #endif
 
-#ifndef HAVE_SKB_PROTOCOL
-static inline __be16 skb_protocol(const struct sk_buff *skb, bool skip_vlan)
+static inline __be16 tc_skb_protocol(const struct sk_buff *skb)
 {
+#ifdef HAVE_SKB_PROTOCOL
+	return skb_protocol(skb, true);
+#else
 	if (skb_vlan_tag_present(skb))
 #ifdef HAVE_VLAN_PROTO_IN_SK_BUFF
 		return skb->vlan_proto;
@@ -416,8 +387,8 @@ static inline __be16 skb_protocol(const struct sk_buff *skb, bool skip_vlan)
 		return htons(ETH_P_8021Q);
 #endif
 	return skb->protocol;
-}
 #endif
+}
 #endif
 
 #ifdef HAVE_XT_NET
@@ -432,36 +403,6 @@ static inline __be16 skb_protocol(const struct sk_buff *skb, bool skip_vlan)
 static inline u16 nfnl_msg_type(u8 subsys, u8 msg_type)
 {
 	return subsys << 8 | msg_type;
-}
-#endif
-
-#ifndef HAVE_NFNL_MSG_PUT
-#include <linux/netfilter/nfnetlink.h>
-static inline void nfnl_fill_hdr(struct nlmsghdr *nlh, u8 family, u8 version,
-				 __be16 res_id)
-{
-	struct nfgenmsg *nfmsg;
-
-	nfmsg = nlmsg_data(nlh);
-	nfmsg->nfgen_family = family;
-	nfmsg->version = version;
-	nfmsg->res_id = res_id;
-}
-
-static inline struct nlmsghdr *nfnl_msg_put(struct sk_buff *skb, u32 portid,
-					    u32 seq, int type, int flags,
-					    u8 family, u8 version,
-					    __be16 res_id)
-{
-	struct nlmsghdr *nlh;
-
-	nlh = nlmsg_put(skb, portid, seq, type, sizeof(struct nfgenmsg), flags);
-	if (!nlh)
-		return NULL;
-
-	nfnl_fill_hdr(nlh, family, version, res_id);
-
-	return nlh;
 }
 #endif
 
@@ -516,23 +457,6 @@ static inline ssize_t strscpy(char * dest, const char * src, size_t count)
 
 #ifndef HAVE_NLA_STRSCPY
 #define nla_strscpy	nla_strlcpy
-#endif
-
-#if !defined(HAVE_EAGAIN_IN_NFNETLINK_UNICAST) || !defined(HAVE_NLMSG_UNICAST)
-#define NFNETLINK_UNICAST(cntl, skb, net, portid)	ipset_nfnetlink_unicast(cntl, skb, portid)
-static inline int ipset_nfnetlink_unicast(struct sock *ctnl, struct sk_buff *skb, u32 portid)
-{
-	int err = netlink_unicast(ctnl, skb,  portid, MSG_DONTWAIT);
-
-	if (err > 0)
-		err = 0;
-	if (err == -EAGAIN)
-		err = -ENOBUFS;
-
-	return err;
-}
-#else
-#define NFNETLINK_UNICAST(cntl, skb, net, portid)	nfnetlink_unicast(skb, net, portid)
 #endif
 
 #ifndef smp_mb__before_atomic
@@ -605,11 +529,5 @@ static inline void *kvzalloc(size_t size, gfp_t flags)
 	return members;
 }
 #endif
-
-#ifndef unsafe_memcpy
-#define unsafe_memcpy(dst, src, bytes, justification)		\
-	memcpy(dst, src, bytes)
-#endif
-
 #endif /* IP_SET_COMPAT_HEADERS */
 #endif /* __IP_SET_COMPAT_H */

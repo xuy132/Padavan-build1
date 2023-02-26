@@ -41,9 +41,6 @@
 #define syntax_err(fmt, args...) \
 	ipset_err(session, "Syntax error: " fmt , ## args)
 
-#define syntax_err_ll(errtype, fmt, args...) \
-	ipset_session_report(session, errtype, "Syntax error: " fmt , ## args)
-
 static char *
 ipset_strchr(const char *str, const char *sep)
 {
@@ -90,8 +87,7 @@ string_to_number_ll(struct ipset_session *session,
 		    const char *str,
 		    unsigned long long min,
 		    unsigned long long max,
-		    unsigned long long *ret,
-		    enum ipset_err_type errtype)
+		    unsigned long long *ret)
 {
 	unsigned long long number = 0;
 	char *end;
@@ -108,24 +104,23 @@ string_to_number_ll(struct ipset_session *session,
 			errno = ERANGE;
 	}
 	if (errno == ERANGE && max)
-		return syntax_err_ll(errtype, "'%s' is out of range %llu-%llu",
-				     str, min, max);
+		return syntax_err("'%s' is out of range %llu-%llu",
+				  str, min, max);
 	else if (errno == ERANGE)
-		return syntax_err_ll(errtype, "'%s' is out of range %llu-%llu",
-				     str, min, ULLONG_MAX);
+		return syntax_err("'%s' is out of range %llu-%llu",
+				  str, min, ULLONG_MAX);
 	else
-		return syntax_err_ll(errtype, "'%s' is invalid as number", str);
+		return syntax_err("'%s' is invalid as number", str);
 }
 
 static int
 string_to_u8(struct ipset_session *session,
-	     const char *str, uint8_t *ret,
-	     enum ipset_err_type errtype)
+	     const char *str, uint8_t *ret)
 {
 	int err;
 	unsigned long long num = 0;
 
-	err = string_to_number_ll(session, str, 0, 255, &num, errtype);
+	err = string_to_number_ll(session, str, 0, 255, &num);
 	*ret = num;
 
 	return err;
@@ -135,7 +130,7 @@ static int
 string_to_cidr(struct ipset_session *session,
 	       const char *str, uint8_t min, uint8_t max, uint8_t *ret)
 {
-	int err = string_to_u8(session, str, ret, IPSET_ERROR);
+	int err = string_to_u8(session, str, ret);
 
 	if (!err && (*ret < min || *ret > max))
 		return syntax_err("'%s' is out of range %u-%u",
@@ -146,13 +141,12 @@ string_to_cidr(struct ipset_session *session,
 
 static int
 string_to_u16(struct ipset_session *session,
-	      const char *str, uint16_t *ret,
-	      enum ipset_err_type errtype)
+	      const char *str, uint16_t *ret)
 {
 	int err;
 	unsigned long long num = 0;
 
-	err = string_to_number_ll(session, str, 0, USHRT_MAX, &num, errtype);
+	err = string_to_number_ll(session, str, 0, USHRT_MAX, &num);
 	*ret = num;
 
 	return err;
@@ -165,8 +159,7 @@ string_to_u32(struct ipset_session *session,
 	int err;
 	unsigned long long num = 0;
 
-	err = string_to_number_ll(session, str, 0, UINT_MAX, &num,
-				  IPSET_ERROR);
+	err = string_to_number_ll(session, str, 0, UINT_MAX, &num);
 	*ret = num;
 
 	return err;
@@ -281,10 +274,7 @@ parse_portname(struct ipset_session *session, const char *str,
 	       uint16_t *port, const char *proto)
 {
 	char *saved, *tmp;
-	const char *protoname;
-	const struct protoent *protoent;
 	struct servent *service;
-	uint8_t protonum = 0;
 
 	saved = tmp = ipset_strdup(session, str);
 	if (tmp == NULL)
@@ -293,15 +283,7 @@ parse_portname(struct ipset_session *session, const char *str,
 	if (tmp == NULL)
 		goto error;
 
-	protoname = proto;
-	if (string_to_u8(session, proto, &protonum, IPSET_WARNING) == 0) {
-		protoent = getprotobynumber(protonum);
-		if (protoent == NULL)
-			goto error;
-		protoname = protoent->p_name;
-	}
-
-	service = getservbyname(tmp, protoname);
+	service = getservbyname(tmp, proto);
 	if (service != NULL) {
 		*port = ntohs((uint16_t) service->s_port);
 		free(saved);
@@ -337,7 +319,7 @@ ipset_parse_port(struct ipset_session *session,
 	assert(opt == IPSET_OPT_PORT || opt == IPSET_OPT_PORT_TO);
 	assert(str);
 
-	if (string_to_u16(session, str, &port, IPSET_WARNING) == 0) {
+	if (string_to_u16(session, str, &port) == 0) {
 		return ipset_session_data_set(session, opt, &port);
 	}
 	/* Error is stored as warning in session report */
@@ -487,23 +469,21 @@ ipset_parse_proto(struct ipset_session *session,
 {
 	const struct protoent *protoent;
 	uint8_t proto = 0;
-	uint8_t protonum = 0;
 
 	assert(session);
 	assert(opt == IPSET_OPT_PROTO);
 	assert(str);
 
-	if (string_to_u8(session, str, &protonum, IPSET_WARNING) == 0)
-		return ipset_session_data_set(session, opt, &protonum);
-
-	/* No error, so reset false error messages */
-	ipset_session_report_reset(session);
 	protoent = getprotobyname(strcasecmp(str, "icmpv6") == 0
 				  ? "ipv6-icmp" : str);
+	if (protoent == NULL) {
+		uint8_t protonum = 0;
 
-	if (protoent == NULL)
-		return syntax_err("cannot parse '%s' "
-				  "as a protocol", str);
+		if (string_to_u8(session, str, &protonum) ||
+		    (protoent = getprotobynumber(protonum)) == NULL)
+			return syntax_err("cannot parse '%s' "
+					  "as a protocol", str);
+	}
 	proto = protoent->p_proto;
 	if (!proto)
 		return syntax_err("Unsupported protocol '%s'", str);
@@ -533,8 +513,8 @@ parse_icmp_typecode(struct ipset_session *session,
 				 str, family);
 	}
 	*a++ = '\0';
-	if ((err = string_to_u8(session, tmp, &type, IPSET_ERROR)) != 0 ||
-	    (err = string_to_u8(session, a, &code, IPSET_ERROR)) != 0)
+	if ((err = string_to_u8(session, tmp, &type)) != 0 ||
+	    (err = string_to_u8(session, a, &code)) != 0)
 		goto error;
 
 	typecode = (type << 8) | code;
@@ -1355,8 +1335,7 @@ ipset_parse_timeout(struct ipset_session *session,
 	assert(opt == IPSET_OPT_TIMEOUT);
 	assert(str);
 
-	err = string_to_number_ll(session, str, 0, (UINT_MAX>>1)/1000, &llnum,
-				  IPSET_ERROR);
+	err = string_to_number_ll(session, str, 0, (UINT_MAX>>1)/1000, &llnum);
 	if (err == 0) {
 		/* Timeout is expected to be 32bits wide, so we have
 		   to convert it here */
@@ -1600,8 +1579,7 @@ ipset_parse_uint64(struct ipset_session *session,
 	assert(session);
 	assert(str);
 
-	err = string_to_number_ll(session, str, 0, ULLONG_MAX - 1, &value,
-				  IPSET_ERROR);
+	err = string_to_number_ll(session, str, 0, ULLONG_MAX - 1, &value);
 	if (err)
 		return err;
 
@@ -1645,7 +1623,7 @@ ipset_parse_uint16(struct ipset_session *session,
 	assert(session);
 	assert(str);
 
-	err = string_to_u16(session, str, &value, IPSET_ERROR);
+	err = string_to_u16(session, str, &value);
 	if (err == 0)
 		return ipset_session_data_set(session, opt, &value);
 
@@ -1673,7 +1651,7 @@ ipset_parse_uint8(struct ipset_session *session,
 	assert(session);
 	assert(str);
 
-	if ((err = string_to_u8(session, str, &value, IPSET_ERROR)) == 0)
+	if ((err = string_to_u8(session, str, &value)) == 0)
 		return ipset_session_data_set(session, opt, &value);
 
 	return err;
@@ -1704,9 +1682,6 @@ ipset_parse_netmask(struct ipset_session *session,
 	assert(str);
 
 	data = ipset_session_data(session);
-	if (ipset_data_test(data, IPSET_OPT_BITMASK))
-		return syntax_err("bitmask and netmask are mutually exclusive, provide only one");
-
 	family = ipset_data_family(data);
 	if (family == NFPROTO_UNSPEC) {
 		family = NFPROTO_IPV4;
@@ -1723,46 +1698,6 @@ ipset_parse_netmask(struct ipset_session *session,
 				  family == NFPROTO_IPV4 ? 32 : 128);
 
 	return ipset_data_set(data, opt, &cidr);
-}
-
-/**
- * ipset_parse_bitmask - parse string as a bitmask
- * @session: session structure
- * @opt: option kind of the data
- * @str: string to parse
- *
- * Parse string as a bitmask value, depending on family type.
- * If family is not set yet, INET is assumed.
- * The value is stored in the data blob of the session.
- *
- * Returns 0 on success or a negative error code.
- */
-int
-ipset_parse_bitmask(struct ipset_session *session,
-		    enum ipset_opt opt, const char *str)
-{
-	uint8_t family;
-	struct ipset_data *data;
-
-	assert(session);
-	assert(opt == IPSET_OPT_BITMASK);
-	assert(str);
-
-	data = ipset_session_data(session);
-	if (ipset_data_test(data, IPSET_OPT_NETMASK))
-		return syntax_err("bitmask and netmask are mutually exclusive, provide only one");
-
-	family = ipset_data_family(data);
-	if (family == NFPROTO_UNSPEC) {
-		family = NFPROTO_IPV4;
-		ipset_data_set(data, IPSET_OPT_FAMILY, &family);
-	}
-
-	if (parse_ipaddr(session, opt, str, family))
-		return syntax_err("bitmask is not valid for family = %s",
-				  family == NFPROTO_IPV4 ? "inet" : "inet6");
-
-	return 0;
 }
 
 /**
