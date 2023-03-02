@@ -236,8 +236,8 @@
 //config:	depends on TRACEROUTE || TRACEROUTE6
 
 /* Needs socket(AF_INET, SOCK_RAW, IPPROTO_ICMP), therefore BB_SUID_MAYBE: */
-//applet:IF_TRACEROUTE(APPLET(traceroute, BB_DIR_BIN, BB_SUID_MAYBE))
-//applet:IF_TRACEROUTE6(APPLET(traceroute6, BB_DIR_BIN, BB_SUID_MAYBE))
+//applet:IF_TRACEROUTE(APPLET(traceroute, BB_DIR_USR_BIN, BB_SUID_MAYBE))
+//applet:IF_TRACEROUTE6(APPLET(traceroute6, BB_DIR_USR_BIN, BB_SUID_MAYBE))
 
 //kbuild:lib-$(CONFIG_TRACEROUTE) += traceroute.o
 //kbuild:lib-$(CONFIG_TRACEROUTE6) += traceroute.o
@@ -972,7 +972,7 @@ traceroute_init(int op, char **argv)
 		xmove_fd(xsocket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6), rcvsock);
 # if ENABLE_FEATURE_TRACEROUTE_VERBOSE
 		/* want recvmsg to report target local address (for -v) */
-		socket_want_pktinfo(rcvsock);
+		setsockopt_1(rcvsock, SOL_IPV6, IPV6_RECVPKTINFO);
 # endif
 	}
 #endif

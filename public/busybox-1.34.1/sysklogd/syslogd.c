@@ -832,9 +832,9 @@ static void timestamp_and_log(int pri, char *msg, int len)
 	 && msg[9] == ':' && msg[12] == ':' && msg[15] == ' '
 	) {
 		if (!(option_mask32 & OPT_timestamp)) {
-			// patch -use local time anyway
-			time(&now);
-			timestamp = ctime(&now) + 4;
+			/* use message timestamp */
+			timestamp = msg;
+			now = 0;
 		}
 		msg += 16;
 	}

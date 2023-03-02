@@ -75,7 +75,6 @@ static const char udhcpc_longopts[] ALIGN1 =
 	"background\0"     No_argument       "b"
 	)
 	"broadcast\0"      No_argument       "B"
-	"daemon\0"         No_argument       "d"
 	IF_FEATURE_UDHCPC_ARPING("arping\0"	Optional_argument "a")
 	IF_FEATURE_UDHCP_PORT("client-port\0"	Required_argument "P")
 	;
@@ -104,11 +103,9 @@ enum {
 /* The rest has variable bit positions, need to be clever */
 	OPTBIT_B = 18,
 	USE_FOR_MMU(             OPTBIT_b,)
-	USE_FOR_MMU(             OPTBIT_d,)
 	IF_FEATURE_UDHCPC_ARPING(OPTBIT_a,)
 	IF_FEATURE_UDHCP_PORT(   OPTBIT_P,)
 	USE_FOR_MMU(             OPT_b = 1 << OPTBIT_b,)
-	USE_FOR_MMU(             OPT_d = 1 << OPTBIT_d,)
 	IF_FEATURE_UDHCPC_ARPING(OPT_a = 1 << OPTBIT_a,)
 	IF_FEATURE_UDHCP_PORT(   OPT_P = 1 << OPTBIT_P,)
 };
@@ -128,9 +125,7 @@ static const uint8_t len_of_option_as_string[] ALIGN1 = {
 	[OPTION_IP              ] = sizeof("255.255.255.255 "),
 	[OPTION_IP_PAIR         ] = sizeof("255.255.255.255 ") * 2,
 	[OPTION_STATIC_ROUTES   ] = sizeof("255.255.255.255/32 255.255.255.255 "),
-#if ENABLE_FEATURE_UDHCP_RFC5969
 	[OPTION_6RD             ] = sizeof("132 128 ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff 255.255.255.255 "),
-#endif
 	[OPTION_STRING          ] = 1,
 	[OPTION_STRING_HOST     ] = 1,
 #if ENABLE_FEATURE_UDHCP_RFC3397
@@ -301,7 +296,6 @@ static NOINLINE char *xmalloc_optname_optval(const struct dhcp_optitem *opt_item
 
 			return ret;
 		}
-#if ENABLE_FEATURE_UDHCP_RFC5969
 		case OPTION_6RD:
 			/* Option binary format (see RFC 5969):
 			 *  0                   1                   2                   3
@@ -344,7 +338,6 @@ static NOINLINE char *xmalloc_optname_optval(const struct dhcp_optitem *opt_item
 			}
 
 			return ret;
-#endif
 #if ENABLE_FEATURE_UDHCP_RFC3397
 		case OPTION_DNS_STRING:
 			/* unpack option into dest; use ret for prefix (i.e., "optname=") */
@@ -627,10 +620,7 @@ static void add_client_options(struct dhcp_packet *packet)
 {
 	int i, end, len;
 
-	len = sizeof(struct ip_udp_dhcp_packet);
-	if (client_data.client_mtu > 0)
-		len = MIN(client_data.client_mtu, len);
-	udhcp_add_simple_option(packet, DHCP_MAX_SIZE, htons(len));
+	udhcp_add_simple_option(packet, DHCP_MAX_SIZE, htons(IP_UDP_DHCP_SIZE));
 
 	/* Add a "param req" option with the list of options we'd like to have
 	 * from stubborn DHCP servers. Pull the data from the struct in common.c.
@@ -732,7 +722,6 @@ static int bcast_or_ucast(struct dhcp_packet *packet, uint32_t ciaddr, uint32_t 
 static NOINLINE int send_discover(uint32_t requested)
 {
 	struct dhcp_packet packet;
-	static int msgs = 0;
 
 	/* Fill in: op, htype, hlen, cookie, chaddr fields,
 	 * xid field, message type option:
@@ -747,7 +736,6 @@ static NOINLINE int send_discover(uint32_t requested)
 	 */
 	add_client_options(&packet);
 
-	if (msgs++ < 3)
 	bb_simple_info_msg("broadcasting discover");
 	return raw_bcast_from_client_data_ifindex(&packet, INADDR_ANY);
 }
@@ -1189,7 +1177,6 @@ static void client_background(void)
 //usage:     "\n	-A SEC		Wait if lease is not obtained (default 20)"
 //usage:	USE_FOR_MMU(
 //usage:     "\n	-b		Background if lease is not obtained"
-//usage:     "\n	-d		Background after run"
 //usage:	)
 //usage:     "\n	-n		Exit if lease is not obtained"
 //usage:     "\n	-q		Exit after obtaining lease"
@@ -1230,7 +1217,7 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
 	llist_t *list_x = NULL;
 	int tryagain_timeout = 20;
 	int discover_timeout = 3;
-	int discover_retries = 4;
+	int discover_retries = 3;
 	uint32_t server_id = server_id; /* for compiler */
 	uint32_t requested_ip = 0;
 	int packet_num;
@@ -1259,7 +1246,6 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
 		/* O,x: list; -T,-t,-A take numeric param */
 		"CV:F:i:np:qRr:s:T:+t:+SA:+O:*ox:*fB"
 		USE_FOR_MMU("b")
-		USE_FOR_MMU("d")
 		IF_FEATURE_UDHCPC_ARPING("a::")
 		IF_FEATURE_UDHCP_PORT("P:")
 		"v"
@@ -1358,8 +1344,7 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
 	if (udhcp_read_interface(client_data.interface,
 			&client_data.ifindex,
 			NULL,
-			client_data.client_mac,
-			&client_data.client_mtu)
+			client_data.client_mac)
 	) {
 		return 1;
 	}
@@ -1369,13 +1354,6 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
 	if (!(opt & OPT_f)) {
 		bb_daemonize_or_rexec(0 /* flags */, argv);
 		logmode = LOGMODE_NONE;
-	}
-#else
-	if (!(opt & OPT_f) && (opt & OPT_d) ) {
-		bb_daemonize(0);
-		logmode = LOGMODE_NONE;
-		/* do not background again! */
-		opt = ((opt & ~OPT_b) | OPT_f);
 	}
 #endif
 	if (opt & OPT_S) {
@@ -1391,7 +1369,7 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
 	srand(monotonic_us());
 
 	client_data.state = INIT_SELECTING;
-//	d4_run_script_deconfig();
+	d4_run_script_deconfig();
 	packet_num = 0;
 	timeout = 0;
 	lease_remaining = 0;
@@ -1403,12 +1381,6 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
 	for (;;) {
 		struct pollfd pfds[2];
 		struct dhcp_packet packet;
-
-		/* When running on a bridge, the ifindex may have changed (e.g. if
-		 * member interfaces were added/removed or if the status of the
-		 * bridge changed).
-		 * Workaround: refresh it here before processing the next packet */
-		udhcp_read_interface(client_data.interface, &client_data.ifindex, NULL, client_data.client_mac, &client_data.client_mtu);
 
 		//bb_error_msg("sockfd:%d, listen_mode:%d", client_data.sockfd, client_data.listen_mode);
 
@@ -1461,8 +1433,7 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
 			if (udhcp_read_interface(client_data.interface,
 					&client_data.ifindex,
 					NULL,
-					client_data.client_mac,
-					&client_data.client_mtu)
+					client_data.client_mac)
 			) {
 				goto ret0; /* iface is gone? */
 			}

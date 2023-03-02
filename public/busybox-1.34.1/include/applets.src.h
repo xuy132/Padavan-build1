@@ -88,6 +88,7 @@ s     - suid type:
 
 INSERT
 
+
 #if !defined(PROTOTYPES) && !defined(NAME_MAIN) && !defined(MAKE_USAGE) \
 	&& !defined(MAKE_LINKS) && !defined(MAKE_SUID)
 };
