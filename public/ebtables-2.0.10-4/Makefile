@@ -9,23 +9,21 @@ LOCKFILE?=/var/lib/ebtables/lock
 LOCKDIR:=$(shell echo $(LOCKFILE) | sed 's/\(.*\)\/.*/\1/')/
 
 # default paths
-LIBDIR:=/usr/lib/ebtables
+LIBDIR:=/usr/lib
 MANDIR:=/usr/local/man
-BINDIR:=/usr/bin
+BINDIR:=/usr/local/sbin
 ETCDIR:=/etc
 INITDIR:=/etc/rc.d/init.d
 SYSCONFIGDIR:=/etc/sysconfig
 DESTDIR:=
 
-CFLAGS +=-Os -Wall -Wunused
-CFLAGS_SH_LIB:=-fPIC -Os
+CFLAGS:=-Wall -Wunused -Werror
+CFLAGS_SH_LIB:=-fPIC -O3
+CC:=gcc
 
 ifeq ($(shell uname -m),sparc64)
 CFLAGS+=-DEBT_MIN_ALIGN=8 -DKERNEL_64_USERSPACE_32
 endif
-
-CFLAGS  += -ffunction-sections -fdata-sections
-LDFLAGS += -Wl,--gc-sections
 
 include extensions/Makefile
 
