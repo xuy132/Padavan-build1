@@ -997,7 +997,7 @@ int udhcpc6_main(int argc UNUSED_PARAM, char **argv)
 	if (udhcp_read_interface(client_config.interface,
 			&client_config.ifindex,
 			NULL,
-			client_config.client_mac, NULL)
+			client_config.client_mac)
 	) {
 		return 1;
 	}
@@ -1100,7 +1100,7 @@ int udhcpc6_main(int argc UNUSED_PARAM, char **argv)
 			if (udhcp_read_interface(client_config.interface,
 					&client_config.ifindex,
 					NULL,
-					client_config.client_mac, NULL)
+					client_config.client_mac)
 			) {
 				goto ret0; /* iface is gone? */
 			}

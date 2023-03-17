@@ -461,8 +461,9 @@ static int do_modprobe(struct module_entry *m)
 				rc = bb_delete_module(m2->modname, O_EXCL);
 				if (rc) {
 					if (first) {
-						bb_perror_msg("can't unload module %s",
-							humanly_readable_name(m2));
+						bb_error_msg("can't unload module %s: %s",
+							humanly_readable_name(m2),
+							moderror(rc));
 						break;
 					}
 				} else {
@@ -621,7 +622,7 @@ int modprobe_main(int argc UNUSED_PARAM, char **argv)
 			 * autoclean will be removed".
 			 */
 			if (bb_delete_module(NULL, O_NONBLOCK | O_EXCL) != 0)
-				bb_perror_nomsg_and_die();
+				bb_perror_msg_and_die("rmmod");
 		}
 		return EXIT_SUCCESS;
 	}
