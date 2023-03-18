@@ -17,14 +17,12 @@ LIBS= -lm $(MYLIBS)
 MYCFLAGS=
 MYLDFLAGS=
 MYLIBS=
-# USE_READLINE=1
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
 PLATS= aix ansi bsd freebsd generic linux macosx mingw posix solaris
 
 LUA_A=	liblua.a
-LUA_SO= liblua.so
 CORE_O=	lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
 	lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o ltm.o  \
 	lundump.o lvm.o lzio.o
@@ -35,12 +33,11 @@ LUA_T=	lua
 LUA_O=	lua.o
 
 LUAC_T=	luac
-LUAC_O=	luac.o print.o lopcodes.o
+LUAC_O=	luac.o print.o
 
 ALL_O= $(CORE_O) $(LIB_O) $(LUA_O) $(LUAC_O)
-ALL_T= $(LUA_A) $(LUA_SO) $(LUA_T) $(LUAC_T)
+ALL_T= $(LUA_A) $(LUA_T) $(LUAC_T)
 ALL_A= $(LUA_A)
-ALL_SO= $(LUA_SO)
 
 default: $(PLAT)
 
@@ -50,23 +47,14 @@ o:	$(ALL_O)
 
 a:	$(ALL_A)
 
-so:	$(ALL_SO)
-
 $(LUA_A): $(CORE_O) $(LIB_O)
 	$(AR) $@ $(CORE_O) $(LIB_O)	# DLL needs all object files
 	$(RANLIB) $@
 
-$(LUA_SO): $(CORE_O) $(LIB_O)
-	$(CC) -o $@.$(PKG_VERSION) -shared -Wl,-soname="$@.$(PKG_VERSION)" $?
-	ln -fs $@.$(PKG_VERSION) $@
+$(LUA_T): $(LUA_O) $(LUA_A)
+	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) $(LUA_A) $(LIBS)
 
-$(LUA_T): $(LUA_O) $(LUA_SO)
-	$(CC) -o $@ -L. -llua $(MYLDFLAGS) $(LUA_O) $(LIBS)
-
-$(LUAC_T): $(LUAC_O) $(LUA_SO)
-	$(CC) -o $@ -L. -llua $(MYLDFLAGS) $(LUAC_O) $(LIBS)
-
-$(LUAC_T)-host: $(LUAC_O) $(LUA_A)
+$(LUAC_T): $(LUAC_O) $(LUA_A)
 	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(LUA_A) $(LIBS)
 
 clean:
@@ -87,7 +75,7 @@ echo:
 	@echo "MYLIBS = $(MYLIBS)"
 
 # convenience targets for popular platforms
-RFLAG=$(if $(USE_READLINE),-DLUA_USE_READLINE)
+
 none:
 	@echo "Please choose a platform:"
 	@echo "   $(PLATS)"
@@ -102,16 +90,16 @@ bsd:
 	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-Wl,-E"
 
 freebsd:
-	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX $(RFLAG)" MYLIBS="-Wl,-E$(if $(USE_READLINE), -lreadline)"
+	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX" MYLIBS="-Wl,-E -lreadline"
 
 generic:
 	$(MAKE) all MYCFLAGS=
 
 linux:
-	$(MAKE) all MYCFLAGS+="-DLUA_USE_LINUX $(RFLAG)" MYLIBS="-Wl,-E -ldl $(if $(USE_READLINE), -lreadline -lhistory -lncurses)"
+	$(MAKE) all MYCFLAGS=-DLUA_USE_LINUX MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
 
 macosx:
-	$(MAKE) all MYCFLAGS=-DLUA_USE_LINUX $(if $(USE_READLINE), MYLIBS="-lreadline")
+	$(MAKE) all MYCFLAGS=-DLUA_USE_LINUX MYLIBS="-lreadline"
 # use this on Mac OS X 10.3-
 #	$(MAKE) all MYCFLAGS=-DLUA_USE_MACOSX
 

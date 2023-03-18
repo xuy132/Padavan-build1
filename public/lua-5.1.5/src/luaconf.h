@@ -36,6 +36,7 @@
 #if defined(LUA_USE_LINUX)
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
+#define LUA_USE_READLINE	/* needs some extra libraries */
 #endif
 
 #if defined(LUA_USE_MACOSX)
@@ -93,9 +94,9 @@
 	".\\?.dll;"  LUA_CDIR"?.dll;" LUA_CDIR"loadall.dll"
 
 #else
-#define LUA_ROOT	"/etc_ro/"
-#define LUA_LDIR	LUA_ROOT "lua/5.1/share/"
-#define LUA_CDIR	LUA_ROOT "lua/5.1/lib/"
+#define LUA_ROOT	"/usr/local/"
+#define LUA_LDIR	LUA_ROOT "share/lua/5.1/"
+#define LUA_CDIR	LUA_ROOT "lib/lua/5.1/"
 #define LUA_PATH_DEFAULT  \
 		"./?.lua;"  LUA_LDIR"?.lua;"  LUA_LDIR"?/init.lua;" \
 		            LUA_CDIR"?.lua;"  LUA_CDIR"?/init.lua"
