@@ -140,6 +140,33 @@ int main( int ArgCn, char *ArgVc[] ) {
             break;
         }
 
+        // Open /dev/null before chrooting.
+        if (!NotAsDaemon) {
+            devnull = open("/dev/null", O_RDWR);
+            if (devnull == -1)
+                my_log(LOG_ERR, 0, "unable to open /dev/null");
+        }
+
+        config = getCommonConfig();
+
+        if (config->user[0]) {
+            pw = getpwnam(config->user);
+            if (pw == NULL)
+                my_log(LOG_ERR, 0, "unknown user %s", config->user);
+        }
+
+        if (config->chroot[0])
+            if (chroot(config->chroot) != 0 || chdir("/") != 0)
+                my_log(LOG_ERR, 0, "unable to chroot to %s",
+                  config->chroot);
+
+        if (pw != NULL)
+            if (setgroups(1, &pw->pw_gid) != 0 ||
+              setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) != 0 ||
+              setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid) != 0)
+                my_log(LOG_ERR, 0, "unable to drop privileges to %s",
+                  config->user);
+
         if ( !NotAsDaemon ) {
 
             // Only daemon goes past this line...

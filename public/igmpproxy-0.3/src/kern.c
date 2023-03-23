@@ -112,7 +112,14 @@ void k_set_if(uint32_t ifa) {
 }
 
 void k_join(struct IfDesc *ifd, uint32_t grp) {
+#ifdef HAVE_STRUCT_IP_MREQN
+    struct ip_mreqn mreq;
+    mreq.imr_address.s_addr = ifd->InAdr.s_addr;
+    mreq.imr_ifindex = ifd->ifIndex;
+#else
     struct ip_mreq mreq;
+    mreq.imr_interface.s_addr = ifd->InAdr.s_addr;
+#endif
 
     mreq.imr_multiaddr.s_addr = grp;
     mreq.imr_interface.s_addr = ifd->InAdr.s_addr;
@@ -134,7 +141,14 @@ void k_join(struct IfDesc *ifd, uint32_t grp) {
 }
 
 void k_leave(struct IfDesc *ifd, uint32_t grp) {
+#ifdef HAVE_STRUCT_IP_MREQN
+    struct ip_mreqn mreq;
+    mreq.imr_address.s_addr = ifd->InAdr.s_addr;
+    mreq.imr_ifindex = ifd->ifIndex;
+#else
     struct ip_mreq mreq;
+    mreq.imr_interface.s_addr = ifd->InAdr.s_addr;
+#endif
 
     mreq.imr_multiaddr.s_addr = grp;
     mreq.imr_interface.s_addr = ifd->InAdr.s_addr;

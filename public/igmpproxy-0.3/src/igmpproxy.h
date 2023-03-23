@@ -49,7 +49,9 @@
 #include <fcntl.h>
 #include <stdbool.h>
 #include <time.h>
-
+#include <grp.h>
+#include <limits.h>
+#include <pwd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/ioctl.h>
@@ -142,11 +144,13 @@ struct SubnetList {
     uint32_t            subnet_addr;
     uint32_t            subnet_mask;
     struct SubnetList   *next;
+    bool                allow;
 };
 
 struct IfDesc {
     char                Name[IF_NAMESIZE];
     struct in_addr      InAdr;          /* == 0 for non IP interfaces */
+    int                 ifIndex;
     short               Flags;
     short               state;
     struct SubnetList*  allowednets;
@@ -178,6 +182,8 @@ struct Config {
     // Set if not detect new interface for down stream.
     unsigned short	defaultInterfaceState;	// 0: disable, 2: downstream
     //~ aimwang added done
+    char                chroot[PATH_MAX];
+    char                user[LOGIN_NAME_MAX];
 };
 
 // Holds the indeces of the upstream IF...
