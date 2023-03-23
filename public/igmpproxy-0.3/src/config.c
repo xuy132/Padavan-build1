@@ -189,7 +189,7 @@ int loadConfig(char *configFile) {
             continue;
         }
         else if(strcmp("rescanvif", token)==0) {
-            // Got a defaultdown token...
+            // Got a rescanvif token...
             my_log(LOG_DEBUG, 0, "Config: Need detect new interface.");
             commonConfig.rescanVif = 1;
 
@@ -370,6 +370,7 @@ struct vifconfig *parsePhyintToken(void) {
                 free(tmpPtr);
                 my_log(LOG_ERR, 0, "Unable to parse subnet address.");
             } else {
+                (*agrpPtr)->allow = false;
                 agrpPtr = &(*agrpPtr)->next;
             }
         }

@@ -52,6 +52,7 @@
 #include <grp.h>
 #include <limits.h>
 #include <pwd.h>
+
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/ioctl.h>
@@ -232,7 +233,7 @@ extern uint32_t allrouters_group;
 extern uint32_t alligmp3_group;
 void initIgmp(void);
 void acceptIgmp(int);
-void sendIgmp (uint32_t, uint32_t, int, int, uint32_t,int);
+void sendIgmp (uint32_t, uint32_t, int, int, uint32_t, int, int);
 
 /* lib.c
  */
@@ -247,7 +248,7 @@ void k_set_rcvbuf(int bufsize, int minsize);
 void k_hdr_include(int hdrincl);
 void k_set_ttl(int t);
 void k_set_loop(int l);
-void k_set_if(uint32_t ifa);
+void k_set_if(uint32_t ifa, int ifidx);
 void k_join(struct IfDesc *ifd, uint32_t grp);
 void k_leave(struct IfDesc *ifd, uint32_t grp);
 

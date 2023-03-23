@@ -181,6 +181,7 @@ void rebuildIfVc () {
         // Debug log the result...
         my_log( LOG_DEBUG, 0, "rebuildIfVc: Interface %s Index: %d Addr: %s, Flags: 0x%04x, Network: %s",
             Dp->Name,
+            Dp->ifIndex,
             fmtInAdr( FmtBu, Dp->InAdr ),
             Dp->Flags,
             inetFmts(subnet, mask, s1));
