@@ -89,6 +89,7 @@ jobs:
       run: |
         cp -f public/MI-R4A.config ${{ env.DIR }}/trunk/configs/templates
         cp -f public/adguardhome.sh ${{ env.DIR }}/trunk/user/adguardhome
+        cp -f public/dl_toolchain.sh ${{ env.DIR }}/toolchain-mipsel
         cwd=`pwd`
         CONFIG_TOOLCHAIN_DIR=${cwd//\//\\\/}\\/toolchain-mipsel
         cd ${{ env.DIR }}/trunk
