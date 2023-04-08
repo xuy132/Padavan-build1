@@ -77,6 +77,7 @@ jobs:
         
     - name: Clone source code
       run: |
+        cp -f public/dl_toolchain.sh ${{ env.DIR }}/toolchain-mipsel
         git clone --depth=1 https://github.com/vb1980/Padavan-KVR.git ${{ env.DIR }}
         cd ${{ env.DIR }}/toolchain-mipsel
         sh dl_toolchain.sh
@@ -89,7 +90,6 @@ jobs:
       run: |
         cp -f public/MI-R4A.config ${{ env.DIR }}/trunk/configs/templates
         cp -f public/adguardhome.sh ${{ env.DIR }}/trunk/user/adguardhome
-        cp -f public/dl_toolchain.sh ${{ env.DIR }}/toolchain-mipsel
         cwd=`pwd`
         CONFIG_TOOLCHAIN_DIR=${cwd//\//\\\/}\\/toolchain-mipsel
         cd ${{ env.DIR }}/trunk
