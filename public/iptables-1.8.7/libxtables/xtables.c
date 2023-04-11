@@ -403,7 +403,6 @@ static char *get_modprobe(void)
 
 int xtables_insmod(const char *modname, const char *modprobe, bool quiet)
 {
-#if 0
 	char *buf = NULL;
 	char *argv[4];
 	int status;
@@ -438,7 +437,6 @@ int xtables_insmod(const char *modname, const char *modprobe, bool quiet)
 	free(buf);
 	if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
 		return 0;
-#endif
 	return -1;
 }
 
@@ -970,6 +968,12 @@ void xtables_register_match(struct xtables_match *me)
 	struct xtables_match **pos;
 	bool seen_myself = false;
 
+	if (me->next) {
+		fprintf(stderr, "%s: match \"%s\" already registered\n",
+			xt_params->program_name, me->name);
+		exit(1);
+	}
+
 	if (me->version == NULL) {
 		fprintf(stderr, "%s: match %s<%u> is missing a version\n",
 		        xt_params->program_name, me->name, me->revision);
@@ -1147,6 +1151,12 @@ void xtables_register_target(struct xtables_target *me)
 {
 	struct xtables_target **pos;
 	bool seen_myself = false;
+
+	if (me->next) {
+		fprintf(stderr, "%s: target \"%s\" already registered\n",
+			xt_params->program_name, me->name);
+		exit(1);
+	}
 
 	if (me->version == NULL) {
 		fprintf(stderr, "%s: target %s<%u> is missing a version\n",

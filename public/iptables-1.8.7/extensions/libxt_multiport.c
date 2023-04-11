@@ -571,7 +571,6 @@ static int multiport_xlate6_v1(struct xt_xlate *xl,
 }
 
 static struct xtables_match multiport_mt_reg[] = {
-#ifndef NO_LEGACY
 	{
 		.family        = NFPROTO_IPV4,
 		.name          = "multiport",
@@ -602,7 +601,6 @@ static struct xtables_match multiport_mt_reg[] = {
 		.x6_options    = multiport_opts,
 		.xlate         = multiport_xlate6,
 	},
-#endif
 	{
 		.family        = NFPROTO_IPV4,
 		.name          = "multiport",

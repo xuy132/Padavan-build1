@@ -363,7 +363,6 @@ static int xlate_ct1_tg(struct xt_xlate *xl,
 }
 
 static struct xtables_target ct_target_reg[] = {
-#ifndef NO_LEGACY
 	{
 		.family		= NFPROTO_UNSPEC,
 		.name		= "CT",
@@ -389,7 +388,6 @@ static struct xtables_target ct_target_reg[] = {
 		.x6_parse	= ct_parse_v1,
 		.x6_options	= ct_opts_v1,
 	},
-#endif
 	{
 		.family		= NFPROTO_UNSPEC,
 		.name		= "CT",
@@ -405,7 +403,6 @@ static struct xtables_target ct_target_reg[] = {
 		.x6_options	= ct_opts_v1,
 		.xlate		= xlate_ct1_tg,
 	},
-#ifndef NO_LEGACY
 	{
 		.family        = NFPROTO_UNSPEC,
 		.name          = "NOTRACK",
@@ -444,7 +441,6 @@ static struct xtables_target ct_target_reg[] = {
 		.revision      = 0,
 		.version       = XTABLES_VERSION,
 	},
-#endif
 };
 
 void _init(void)
