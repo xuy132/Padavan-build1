@@ -77,7 +77,7 @@ jobs:
         
     - name: Clone source code
       run: |
-        git clone -b main6 --depth=1 https://github.com/vb1980/Padavan-KVR.git ${{ env.DIR }}
+        git clone -b main6 --depth=1 https://github.com/vipshmily/Padavan-KVR.git ${{ env.DIR }}
         cp -f public/dl_toolchain.sh ${{ env.DIR }}/toolchain-mipsel
         cd ${{ env.DIR }}/toolchain-mipsel
         sh dl_toolchain.sh
