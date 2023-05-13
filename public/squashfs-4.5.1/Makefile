@@ -34,7 +34,7 @@ GZIP_SUPPORT = 1
 # To build install the library and uncomment
 # the XZ_SUPPORT line below.
 #
-XZ_SUPPORT = 1
+#XZ_SUPPORT = 1
 
 
 ############ Building LZO support ##############
@@ -89,7 +89,8 @@ XZ_SUPPORT = 1
 # in Mksquashfs.  Obviously the compression algorithm must have been
 # selected to be built
 #
-COMP_DEFAULT = xz
+COMP_DEFAULT = gzip
+
 
 ###############################################
 #  Extended attribute (XATTRs) build options  #
