@@ -104,7 +104,7 @@ static void FillPublicAddressResponse(unsigned char * resp, in_addr_t senderaddr
 			resp[3] = 3;	/* Network Failure (e.g. NAT box itself
 			                 * has not obtained a DHCP lease) */
 		} else if(getifaddr(ext_if_name, tmp, INET_ADDRSTRLEN, NULL, NULL) < 0) {
-			syslog(LOG_ERR, "Failed to get IP for interface %s", ext_if_name);
+			syslog(LOG_DEBUG, "Failed to get IP for interface %s", ext_if_name);
 			resp[3] = 3;	/* Network Failure (e.g. NAT box itself
 			                 * has not obtained a DHCP lease) */
 		} else {
@@ -306,7 +306,7 @@ void ProcessIncomingNATPMPPacket(int s, unsigned char *msg_buff, int len,
 						if((iport == 0) || ((iport == iport2) && (proto == proto2))) {
 							r = _upnp_delete_redir(eport2, proto2);
 							if(r < 0) {
-								syslog(LOG_ERR, "Failed to remove NAT-PMP mapping eport %hu, protocol %s",
+								syslog(LOG_DEBUG, "Failed to remove NAT-PMP mapping eport %hu, protocol %s",
 								       eport2, (proto2==IPPROTO_TCP)?"TCP":"UDP");
 								resp[3] = 2;	/* Not Authorized/Refused */
 								break;
@@ -392,7 +392,7 @@ void ProcessIncomingNATPMPPacket(int s, unsigned char *msg_buff, int len,
 					if(upnp_redirect_internal(NULL, eport, senderaddrstr,
 					                          iport, proto, desc,
 					                          timestamp) < 0) {
-						syslog(LOG_ERR, "Failed to add NAT-PMP %hu %s->%s:%hu '%s'",
+						syslog(LOG_DEBUG, "Failed to add NAT-PMP %hu %s->%s:%hu '%s'",
 						       eport, (proto==IPPROTO_TCP)?"tcp":"udp", senderaddrstr, iport, desc);
 						resp[3] = 3;  /* Failure */
 					}
@@ -411,7 +411,7 @@ void ProcessIncomingNATPMPPacket(int s, unsigned char *msg_buff, int len,
 	n = sendto_or_schedule(s, resp, resplen, 0,
 	           (struct sockaddr *)senderaddr, sizeof(*senderaddr));
 	if(n<0) {
-		syslog(LOG_ERR, "sendto(natpmp): %m");
+		syslog(LOG_DEBUG, "sendto(natpmp): %m");
 	} else if(n<resplen) {
 		syslog(LOG_ERR, "sendto(natpmp): sent only %d bytes out of %d",
 		       n, resplen);
