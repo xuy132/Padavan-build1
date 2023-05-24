@@ -1,7 +1,7 @@
-/* $Id: testnftnlrdr.c,v 1.4 2020/10/30 21:23:16 nanard Exp $ */
+/* $Id: testnftnlrdr.c,v 1.1 2015/04/30 09:05:08 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2020 Thomas Bernard
+ * (c) 2006-2012 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -9,17 +9,8 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <syslog.h>
-/* for PRIu64 */
-#include <inttypes.h>
-
-#include <linux/netfilter/nf_tables.h>
-#include <libnftnl/table.h>
-#include <libnftnl/chain.h>
-#include <libnftnl/rule.h>
-#include <libnftnl/expr.h>
 
 #include "nftnlrdr.h"
-#include "nftnlrdr_misc.h"
 #include "../commonrdr.h"
 
 #ifndef PRIu64
@@ -52,10 +43,6 @@ main(int argc, char ** argv)
 		return -1;
 	}
 	openlog("testnftnlrdr", LOG_PERROR|LOG_CONS, LOG_LOCAL0);
-	if (init_redirect() < 0) {
-		fprintf(stderr, "init_redirect() FAILED\n");
-		return -1;
-	}
 	eport = (unsigned short)atoi(argv[1]);
 	iaddr = argv[2];
 	iport = (unsigned short)atoi(argv[3]);
@@ -97,9 +84,8 @@ main(int argc, char ** argv)
 		printf("test\n");
 	}
 	printf("trying to list nat rules :\n");
-	print_redirect_rules(argv[1]);
+	list_redirect_rule(argv[1]);
 	printf("deleting\n");
 	delete_redirect_and_filter_rules(eport, IPPROTO_TCP);
-	shutdown_redirect();
 	return 0;
 }

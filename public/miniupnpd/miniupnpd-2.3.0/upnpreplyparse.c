@@ -1,8 +1,7 @@
-/* $Id: upnpreplyparse.c,v 1.21 2019/04/08 13:30:51 nanard Exp $ */
-/* vim: tabstop=4 shiftwidth=4 noexpandtab
- * MiniUPnP project
+/* $Id: upnpreplyparse.c,v 1.19 2015/07/15 10:29:11 nanard Exp $ */
+/* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2019 Thomas Bernard
+ * (c) 2006-2015 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -27,12 +26,12 @@ NameValueParserStartElt(void * d, const char * name, int l)
 }
 
 static void
-NameValueParserEndElt(void * d, const char * name, int namelen)
+NameValueParserEndElt(void * d, const char * name, int l)
 {
     struct NameValueParserData * data = (struct NameValueParserData *)d;
     struct NameValue * nv;
 	(void)name;
-	(void)namelen;
+	(void)l;
 	if(!data->topelt)
 		return;
 	if(strcmp(data->curelt, "NewPortListing") != 0)
@@ -78,7 +77,6 @@ NameValueParserGetData(void * d, const char * datas, int l)
 	if(strcmp(data->curelt, "NewPortListing") == 0)
 	{
 		/* specific case for NewPortListing which is a XML Document */
-		free(data->portListing);
 		data->portListing = malloc(l + 1);
 		if(!data->portListing)
 		{
@@ -106,7 +104,9 @@ ParseNameValue(const char * buffer, int bufsize,
                struct NameValueParserData * data)
 {
 	struct xmlparser parser;
-	memset(data, 0, sizeof(struct NameValueParserData));
+	data->l_head = NULL;
+	data->portListing = NULL;
+	data->portListingLength = 0;
 	/* init xmlparser object */
 	parser.xmlstart = buffer;
 	parser.xmlsize = bufsize;

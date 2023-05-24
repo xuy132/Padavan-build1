@@ -1,12 +1,11 @@
-/* $Id: asyncsendto.c,v 1.12 2020/11/11 12:13:26 nanard Exp $ */
+/* $Id: asyncsendto.c,v 1.7 2015/09/03 18:19:20 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2020 Thomas Bernard
+ * (c) 2006-2014 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
 #include <sys/types.h>
-#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/queue.h>
@@ -22,8 +21,6 @@
 #include "asyncsendto.h"
 #include "upnputils.h"
 
-enum send_state {ESCHEDULED=1, EWAITREADY=2, ESENDNOW=3} state;
-
 /* state diagram for a packet :
  *
  *                     |
@@ -36,7 +33,7 @@ enum send_state {ESCHEDULED=1, EWAITREADY=2, ESENDNOW=3} state;
 struct scheduled_send {
 	LIST_ENTRY(scheduled_send) entries;
 	struct timeval ts;
-	enum send_state state;
+	enum {ESCHEDULED=1, EWAITREADY=2, ESENDNOW=3} state;
 	int sockfd;
 	const void * buf;
 	size_t len;
@@ -98,7 +95,7 @@ sendto_schedule2(int sockfd, const void *buf, size_t len, int flags,
                  const struct sockaddr_in6 *src_addr,
                  unsigned int delay)
 {
-	enum send_state state;
+	enum {ESCHEDULED, EWAITREADY, ESENDNOW} state;
 	ssize_t n;
 	size_t alloc_len;
 	struct timeval tv;
@@ -123,7 +120,7 @@ sendto_schedule2(int sockfd, const void *buf, size_t len, int flags,
 	}
 
 	/* schedule */
-	if(upnp_gettimeofday(&tv) < 0) {
+	if(gettimeofday(&tv, 0) < 0) {
 		return -1;
 	}
 	/* allocate enough space for structure + buffers */
@@ -254,7 +251,7 @@ int try_sendto(fd_set * writefds)
 					/* uncatched error */
 					if(sockaddr_to_string(elt->dest_addr, addr_str, sizeof(addr_str)) <= 0)
 						addr_str[0] = '\0';
-					syslog(LOG_ERR, "%s(sock=%d, len=%u, dest=%s): sendto: %m",
+					syslog(LOG_DEBUG, "%s(sock=%d, len=%u, dest=%s): sendto: %m",
 					       "try_sendto", elt->sockfd, (unsigned)elt->len,
 					       addr_str);
 					ret--;
@@ -286,7 +283,7 @@ void finalize_sendto(void)
 	struct timeval timeout;
 	int max_fd;
 
-	if(upnp_gettimeofday(&deadline) < 0) {
+	if(gettimeofday(&deadline, NULL) < 0) {
 		syslog(LOG_ERR, "gettimeofday: %m");
 		return;
 	}
@@ -320,7 +317,7 @@ void finalize_sendto(void)
 			free(elt);
 		}
 		/* check deadline */
-		if(upnp_gettimeofday(&now) < 0) {
+		if(gettimeofday(&now, NULL) < 0) {
 			syslog(LOG_ERR, "gettimeofday: %m");
 			return;
 		}
@@ -348,3 +345,4 @@ void finalize_sendto(void)
 		}
 	}
 }
+

@@ -1,8 +1,7 @@
-/* $Id: upnpsoap.c,v 1.161 2021/05/11 21:54:18 nanard Exp $ */
-/* vim: tabstop=4 shiftwidth=4 noexpandtab
- * MiniUPnP project
- * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
- * (c) 2006-2021 Thomas Bernard
+/* $Id: upnpsoap.c,v 1.148 2017/04/21 11:20:27 nanard Exp $ */
+/* MiniUPnP project
+ * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
+ * (c) 2006-2017 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -27,13 +26,11 @@
 #include "upnpsoap.h"
 #include "upnpreplyparse.h"
 #include "upnpredirect.h"
-#include "upnppermissions.h"
 #include "upnppinhole.h"
 #include "getifaddr.h"
 #include "getifstats.h"
 #include "getconnstatus.h"
 #include "upnpurns.h"
-#include "upnputils.h"
 
 /* utility function */
 static int is_numeric(const char * s)
@@ -276,7 +273,7 @@ GetStatusInfo(struct upnphttp * h, const char * action, const char * ns)
 	 * Disconnecting, Disconnected */
 
 	status = get_wan_connection_status_str(ext_if_name);
-	uptime = upnp_get_uptime();
+	uptime = (time(NULL) - startup_time);
 	bodylen = snprintf(body, sizeof(body), resp,
 		action, ns, /*SERVICE_TYPE_WANIPC,*/
 		status, (long)uptime, action);
@@ -338,22 +335,15 @@ GetExternalIPAddress(struct upnphttp * h, const char * action, const char * ns)
 		strncpy(ext_ip_addr, use_ext_ip_addr, INET_ADDRSTRLEN);
 		ext_ip_addr[INET_ADDRSTRLEN - 1] = '\0';
 	}
-	else
+	else if(getifaddr(ext_if_name, ext_ip_addr, INET_ADDRSTRLEN, NULL, NULL) < 0)
 	{
-		struct in_addr addr;
-		if(getifaddr(ext_if_name, ext_ip_addr, INET_ADDRSTRLEN, &addr, NULL) < 0)
-		{
-			syslog(LOG_ERR, "Failed to get ip address for interface %s",
-				ext_if_name);
-			ext_ip_addr[0] = '\0';
-		} else if (addr_is_reserved(&addr)) {
-			syslog(LOG_NOTICE, "private/reserved address %s is not suitable for external IP", ext_ip_addr);
-			ext_ip_addr[0] = '\0';
-		}
+		syslog(LOG_DEBUG, "Failed to get ip address for interface %s",
+			ext_if_name);
+		strncpy(ext_ip_addr, "0.0.0.0", INET_ADDRSTRLEN);
 	}
 #else
 	struct lan_addr_s * lan_addr;
-	ext_ip_addr[0] = '\0';
+	strncpy(ext_ip_addr, "0.0.0.0", INET_ADDRSTRLEN);
 	for(lan_addr = lan_addrs.lh_first; lan_addr != NULL; lan_addr = lan_addr->list.le_next)
 	{
 		if( (h->clientaddr.s_addr & lan_addr->mask.s_addr)
@@ -364,17 +354,6 @@ GetExternalIPAddress(struct upnphttp * h, const char * action, const char * ns)
 		}
 	}
 #endif
-	/* WANIPConnection:2 Service 2.3.13 :
-	 * When the external IP address could not be retrieved by the gateway
-	 * (for example, because the interface is down or because there was a
-	 * failure in the last connection setup attempt),
-	 * then the ExternalIPAddress MUST be equal to the empty string.
-	 *
-	 * There is no precise requirement on how theses cases must be handled
-	 * in IGDv1 specifications, but ExternalIPAddress default value is empty
-	 * string. */
-	if (strcmp(ext_ip_addr, "0.0.0.0") == 0)
-		ext_ip_addr[0] = '\0';
 	bodylen = snprintf(body, sizeof(body), resp,
 	              action, ns, /*SERVICE_TYPE_WANIPC,*/
 				  ext_ip_addr, action);
@@ -429,7 +408,7 @@ AddPortMapping(struct upnphttp * h, const char * action, const char * ns)
 	r_host = GetValueFromNameValueList(&data, "NewRemoteHost");
 #ifndef SUPPORT_REMOTEHOST
 #ifdef UPNP_STRICT
-	if (r_host && (r_host[0] != '\0') && (0 != strcmp(r_host, "*")))
+	if (r_host && (strlen(r_host) > 0) && (0 != strcmp(r_host, "*")))
 	{
 		ClearNameValueList(&data);
 		SoapError(h, 726, "RemoteHostOnlySupportsWildcard");
@@ -464,7 +443,7 @@ AddPortMapping(struct upnphttp * h, const char * action, const char * ns)
 		}
 		else
 		{
-			syslog(LOG_ERR, "Failed to convert hostname '%s' to ip address", int_ip);
+			syslog(LOG_DEBUG, "Failed to convert hostname '%s' to ip address", int_ip);
 			ClearNameValueList(&data);
 			SoapError(h, 402, "Invalid Args");
 			return;
@@ -532,7 +511,6 @@ AddPortMapping(struct upnphttp * h, const char * action, const char * ns)
 	/* possible error codes for AddPortMapping :
 	 * 402 - Invalid Args
 	 * 501 - Action Failed
-	 * 606 - Action not authorized (added in IGD v2)
 	 * 715 - Wildcard not permited in SrcAddr
 	 * 716 - Wildcard not permited in ExtPort
 	 * 718 - ConflictInMappingEntry
@@ -549,8 +527,7 @@ AddPortMapping(struct upnphttp * h, const char * action, const char * ns)
      * 728 - NoPortMapsAvailable
              There are not enough free ports available to complete the mapping
              (added in IGD v2)
-	 * 729 - ConflictWithOtherMechanisms (added in IGD v2)
-	 * 732 - WildCardNotPermittedInIntPort (added in IGD v2) */
+	 * 729 - ConflictWithOtherMechanisms (added in IGD v2) */
 	switch(r)
 	{
 	case 0:	/* success */
@@ -563,12 +540,8 @@ AddPortMapping(struct upnphttp * h, const char * action, const char * ns)
 		SoapError(h, 729, "ConflictWithOtherMechanisms");
 		break;
 #endif /* IGD_V2 */
-	case -3:	/* not permitted */
-#ifdef IGD_V2
-		SoapError(h, 606, "Action not authorized");
-		break;
-#endif /* IGD_V2 */
 	case -2:	/* already redirected */
+	case -3:	/* not permitted */
 		SoapError(h, 718, "ConflictInMappingEntry");
 		break;
 	default:
@@ -615,26 +588,23 @@ AddAnyPortMapping(struct upnphttp * h, const char * action, const char * ns)
 	if(leaseduration == 0)
 		leaseduration = 604800;
 
-	if (!int_ip || !ext_port || !int_port || !protocol)
+	if (!int_ip || !ext_port || !int_port)
 	{
 		ClearNameValueList(&data);
 		SoapError(h, 402, "Invalid Args");
 		return;
 	}
 
-	eport = (0 == strcmp(ext_port, "*")) ? 0 : (unsigned short)atoi(ext_port);
-	if (eport == 0) {
-		eport = 1024 + ((random() & 0x7ffffffL) % (65536-1024));
-	}
+	eport = (unsigned short)atoi(ext_port);
 	iport = (unsigned short)atoi(int_port);
-	if(iport == 0 || (!is_numeric(ext_port) && 0 != strcmp(ext_port, "*"))) {
+	if(iport == 0 || !is_numeric(ext_port)) {
 		ClearNameValueList(&data);
 		SoapError(h, 402, "Invalid Args");
 		return;
 	}
 #ifndef SUPPORT_REMOTEHOST
 #ifdef UPNP_STRICT
-	if (r_host && (r_host[0] != '\0') && (0 != strcmp(r_host, "*")))
+	if (r_host && (strlen(r_host) > 0) && (0 != strcmp(r_host, "*")))
 	{
 		ClearNameValueList(&data);
 		SoapError(h, 726, "RemoteHostOnlySupportsWildcard");
@@ -659,7 +629,7 @@ AddAnyPortMapping(struct upnphttp * h, const char * action, const char * ns)
 		}
 		else
 		{
-			syslog(LOG_ERR, "Failed to convert hostname '%s' to ip address", int_ip);
+			syslog(LOG_DEBUG, "Failed to convert hostname '%s' to ip address", int_ip);
 			ClearNameValueList(&data);
 			SoapError(h, 402, "Invalid Args");
 			return;
@@ -679,42 +649,14 @@ AddAnyPortMapping(struct upnphttp * h, const char * action, const char * ns)
 		}
 	}
 
-	/* first try the port asked in request, then
-	 * try +1, -1, +2, -2, etc. */
-	r = upnp_redirect(r_host, eport, int_ip, iport, protocol, desc, leaseduration);
-	if (r != 0 && r != -1) {
-		unsigned short eport_below, eport_above;
-		struct in_addr address;
-		uint32_t allowed_eports[65536 / 32];
-
-		if(inet_aton(int_ip, &address) <= 0) {
-			syslog(LOG_ERR, "inet_aton(%s) FAILED", int_ip);
-		}
-		get_permitted_ext_ports(allowed_eports, upnppermlist, num_upnpperm,
-		                        address.s_addr, iport);
-		eport_above = eport_below = eport;
-		for(;;) {
-			/* loop invariant
-			 * eport is equal to either eport_below or eport_above (or both) */
-			if (eport_below <= 1 && eport_above == 65535) {
-				/* all possible ports tried */
-				r = 1;
-				break;
-			}
-			if (eport_above == 65535 || (eport > eport_below && eport_below > 1)) {
-				eport = --eport_below;
-			} else {
-				eport = ++eport_above;
-			}
-			if (!(allowed_eports[eport / 32] & ((uint32_t)1U << (eport % 32))))
-				continue;	/* not allowed */
-			r = upnp_redirect(r_host, eport, int_ip, iport, protocol, desc, leaseduration);
-			if (r == 0 || r == -1) {
-				/* OK or failure : Stop */
-				break;
-			}
-			/* r : -2 / -4 already redirected or -3 permission check failed :
-			 * continue */
+	/* TODO : accept a different external port
+	 * have some smart strategy to choose the port */
+	for(;;) {
+		r = upnp_redirect(r_host, eport, int_ip, iport, protocol, desc, leaseduration);
+		if(r==-2 && eport < 65535) {
+			eport++;
+		} else {
+			break;
 		}
 	}
 
@@ -722,9 +664,6 @@ AddAnyPortMapping(struct upnphttp * h, const char * action, const char * ns)
 
 	switch(r)
 	{
-	case 1:	/* exhausted possible mappings */
-		SoapError(h, 728, "NoPortMapsAvailable");
-		break;
 	case 0:	/* success */
 		bodylen = snprintf(body, sizeof(body), resp,
 		              action, ns, /*SERVICE_TYPE_WANIPC,*/
@@ -783,7 +722,7 @@ GetSpecificPortMappingEntry(struct upnphttp * h, const char * action, const char
 	}
 #ifndef SUPPORT_REMOTEHOST
 #ifdef UPNP_STRICT
-	if (r_host && (r_host[0] != '\0') && (0 != strcmp(r_host, "*")))
+	if (r_host && (strlen(r_host) > 0) && (0 != strcmp(r_host, "*")))
 	{
 		ClearNameValueList(&data);
 		SoapError(h, 726, "RemoteHostOnlySupportsWildcard");
@@ -816,10 +755,10 @@ GetSpecificPortMappingEntry(struct upnphttp * h, const char * action, const char
 	}
 	else
 	{
-		syslog(LOG_INFO, "%s: rhost='%s' %s %s found => %s:%u desc='%s' duration=%u",
+		syslog(LOG_INFO, "%s: rhost='%s' %s %s found => %s:%u desc='%s'",
 		       action,
 		       r_host ? r_host : "NULL", ext_port, protocol, int_ip,
-		       (unsigned int)iport, desc, leaseduration);
+		       (unsigned int)iport, desc);
 		bodylen = snprintf(body, sizeof(body), resp,
 				action, ns/*SERVICE_TYPE_WANIPC*/,
 				(unsigned int)iport, int_ip, desc, leaseduration,
@@ -872,7 +811,7 @@ DeletePortMapping(struct upnphttp * h, const char * action, const char * ns)
 	}
 #ifndef SUPPORT_REMOTEHOST
 #ifdef UPNP_STRICT
-	if (r_host && (r_host[0] != '\0') && (0 != strcmp(r_host, "*")))
+	if (r_host && (strlen(r_host) > 0) && (0 != strcmp(r_host, "*")))
 	{
 		ClearNameValueList(&data);
 		SoapError(h, 726, "RemoteHostOnlySupportsWildcard");
@@ -1431,7 +1370,7 @@ QueryStateVariable(struct upnphttp * h, const char * action, const char * ns)
 		BuildSendAndCloseSoapResp(h, body, bodylen);
 	}
 #if 0
-	/* not useful */
+	/* not usefull */
 	else if(strcmp(var_name, "ConnectionType") == 0)
 	{
 		bodylen = snprintf(body, sizeof(body), resp, "IP_Routed");
@@ -1455,7 +1394,7 @@ QueryStateVariable(struct upnphttp * h, const char * action, const char * ns)
 	}
 	else
 	{
-		syslog(LOG_NOTICE, "%s: Unknown: %s", action, var_name?var_name:"");
+		syslog(LOG_DEBUG, "%s: Unknown: %s", action, var_name?var_name:"");
 		SoapError(h, 404, "Invalid Var");
 	}
 
@@ -1578,35 +1517,23 @@ PinholeVerification(struct upnphttp * h, char * int_ip, unsigned short int_port)
 	if (inet_pton(AF_INET6, int_ip, &result_ip) <= 0)
 	{
 		n = getaddrinfo(int_ip, NULL, &hints, &ai);
-		if (n == 0)
+		if(!n && ai->ai_family == AF_INET6)
 		{
-			int found = 0;
 			for(p = ai; p; p = p->ai_next)
 			{
-				if(p->ai_family == AF_INET6)
-				{
-					inet_ntop(AF_INET6, (struct in6_addr *) p, int_ip, sizeof(struct in6_addr));
-					result_ip = *((struct in6_addr *) p);
-					found = 1;
-					/* TODO : deal with more than one ip per hostname */
-					break;
-				}
-			}
-			freeaddrinfo(ai);
-			if (!found)
-			{
-				syslog(LOG_NOTICE, "No IPv6 address for hostname '%s'", int_ip);
-				SoapError(h, 402, "Invalid Args");
-				return -1;
+				inet_ntop(AF_INET6, (struct in6_addr *) p, int_ip, sizeof(struct in6_addr));
+				result_ip = *((struct in6_addr *) p);
+				/* TODO : deal with more than one ip per hostname */
+				break;
 			}
 		}
 		else
 		{
-			syslog(LOG_WARNING, "Failed to convert hostname '%s' to IP address : %s",
-			       int_ip, gai_strerror(n));
+			syslog(LOG_DEBUG, "Failed to convert hostname '%s' to ip address", int_ip);
 			SoapError(h, 402, "Invalid Args");
 			return -1;
 		}
+        freeaddrinfo(p);
 	}
 
 	if(inet_ntop(AF_INET6, &(h->clientaddr_v6), senderAddr, INET6_ADDRSTRLEN) == NULL)
@@ -1689,7 +1616,7 @@ AddPinhole(struct upnphttp * h, const char * action, const char * ns)
 	 * - InternalClient value equals to the control point's IP address.
 	 * It is REQUIRED that InternalClient cannot be one of IPv6
 	 * addresses used by the gateway. */
-	if(!int_ip || int_ip[0] == '\0' || 0 == strcmp(int_ip, "*"))
+	if(!int_ip || 0 == strlen(int_ip) || 0 == strcmp(int_ip, "*"))
 	{
 		SoapError(h, 708, "WildCardNotPermittedInSrcIP");
 		goto clear_and_exit;
@@ -1912,13 +1839,6 @@ GetOutboundPinholeTimeout(struct upnphttp * h, const char * action, const char *
 	rem_host = GetValueFromNameValueList(&data, "RemoteHost");
 	rem_port = GetValueFromNameValueList(&data, "RemotePort");
 	protocol = GetValueFromNameValueList(&data, "Protocol");
-
-	if (!int_port || !rem_port || !protocol)
-	{
-		ClearNameValueList(&data);
-		SoapError(h, 402, "Invalid Args");
-		return;
-	}
 
 	rport = (unsigned short)atoi(rem_port);
 	iport = (unsigned short)atoi(int_port);
@@ -2342,9 +2262,9 @@ ExecuteSoapAction(struct upnphttp * h, const char * action, int n)
 				return;
 			}
 		}
-		syslog(LOG_NOTICE, "SoapMethod: Unknown: %.*s %s", methodlen, p, namespace);
+		syslog(LOG_DEBUG, "SoapMethod: Unknown: %.*s %s", methodlen, p, namespace);
 	} else {
-		syslog(LOG_NOTICE, "cannot parse SoapAction");
+		syslog(LOG_DEBUG, "cannot parse SoapAction");
 	}
 
 	SoapError(h, 401, "Invalid Action");
@@ -2392,7 +2312,7 @@ SoapError(struct upnphttp * h, int errCode, const char * errDesc)
 	char body[2048];
 	int bodylen;
 
-	syslog(LOG_INFO, "Returning UPnPError %d: %s", errCode, errDesc);
+	syslog(LOG_DEBUG, "Returning UPnPError %d: %s", errCode, errDesc);
 	bodylen = snprintf(body, sizeof(body), resp, errCode, errDesc);
 	BuildResp2_upnphttp(h, 500, "Internal Server Error", body, bodylen);
 	SendRespAndClose_upnphttp(h);

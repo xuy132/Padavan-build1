@@ -1,9 +1,8 @@
-/* $Id: options.c,v 1.42 2022/01/22 18:39:51 nanard Exp $ */
-/* vim: tabstop=4 shiftwidth=4 noexpandtab
- * MiniUPnP project
- * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
+/* $Id: options.c,v 1.33 2016/02/09 09:37:44 nanard Exp $ */
+/* MiniUPnP project
+ * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
  * author: Ryan Wagoner
- * (c) 2006-2021 Thomas Bernard
+ * (c) 2006-2014 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -19,7 +18,6 @@
 #include "pcplearndscp.h"
 #endif /* PCP_SADSPC */
 #include "upnpglobalvars.h"
-#include "macros.h"
 
 #ifndef DISABLE_CONFIG_FILE
 struct option * ary_options = NULL;
@@ -31,17 +29,10 @@ static const struct {
 	const char * name;
 } optionids[] = {
 	{ UPNPEXT_IFNAME, "ext_ifname" },
-#ifdef ENABLE_IPV6
-	{ UPNPEXT_IFNAME6, "ext_ifname6" },
-#endif
 	{ UPNPEXT_IP,	"ext_ip" },
-	{ UPNPEXT_PERFORM_STUN, "ext_perform_stun" },
-	{ UPNPEXT_STUN_HOST, "ext_stun_host" },
-	{ UPNPEXT_STUN_PORT, "ext_stun_port" },
 	{ UPNPLISTENING_IP, "listening_ip" },
 #ifdef ENABLE_IPV6
 	{ UPNPIPV6_LISTENING_IP, "ipv6_listening_ip" },
-	{ UPNPIPV6_DISABLE, "ipv6_disable" },
 #endif /* ENABLE_IPV6 */
 	{ UPNPPORT, "port" },
 	{ UPNPPORT, "http_port" },	/* "port" and "http_port" are synonims */
@@ -68,8 +59,6 @@ static const struct {
 	{ UPNPCLEANTHRESHOLD, "clean_ruleset_threshold"},
 	{ UPNPCLEANINTERVAL, "clean_ruleset_interval"},
 #ifdef USE_NETFILTER
-	{ UPNPTABLENAME, "upnp_table_name"},
-	{ UPNPNATTABLENAME, "upnp_nat_table_name"},
 	{ UPNPFORWARDCHAIN, "upnp_forward_chain"},
 	{ UPNPNATCHAIN, "upnp_nat_chain"},
 	{ UPNPNATPOSTCHAIN, "upnp_nat_postrouting_chain"},
@@ -93,19 +82,13 @@ static const struct {
 #endif
 #ifdef ENABLE_LEASEFILE
 	{ UPNPLEASEFILE, "lease_file"},
-#ifdef ENABLE_UPNPPINHOLE
-	{ UPNPLEASEFILE6, "lease_file6"},
-#endif
-#endif
-#ifdef IGD_V2
-	{ UPNPFORCEIGDDESCV1, "force_igd_desc_v1"},
 #endif
 	{ UPNPMINISSDPDSOCKET, "minissdpdsocket"},
 	{ UPNPSECUREMODE, "secure_mode"}
 };
 
 int
-readoptionsfile(const char * fname, int debug_flag)
+readoptionsfile(const char * fname)
 {
 	FILE *hfile = NULL;
 	char buffer[1024];
@@ -120,7 +103,7 @@ readoptionsfile(const char * fname, int debug_flag)
 	size_t len;
 	void *tmp;
 
-	if(!fname || (fname[0] == '\0'))
+	if(!fname || (strlen(fname) == 0))
 		return -1;
 
 	memset(buffer, 0, sizeof(buffer));
@@ -170,9 +153,8 @@ readoptionsfile(const char * fname, int debug_flag)
 			tmp = realloc(upnppermlist, sizeof(struct upnpperm) * (num_upnpperm+1));
 			if(tmp == NULL)
 			{
-				INIT_PRINT_ERR("memory allocation error. Permission line in file %s line %d\n",
+				fprintf(stderr, "memory allocation error. Permission line in file %s line %d\n",
 				        fname, linenum);
-				return -1;
 			}
 			else
 			{
@@ -184,9 +166,8 @@ readoptionsfile(const char * fname, int debug_flag)
 				}
 				else
 				{
-					INIT_PRINT_ERR("parsing error file %s line %d : %s\n",
+					fprintf(stderr, "parsing error file %s line %d : %s\n",
 					        fname, linenum, name);
-					return -1;
 				}
 			}
 			continue;
@@ -198,23 +179,21 @@ readoptionsfile(const char * fname, int debug_flag)
 			tmp = realloc(dscp_values_list, sizeof(struct dscp_values) * (num_dscp_values+1));
 			if(tmp == NULL)
 			{
-				INIT_PRINT_ERR("memory allocation error. DSCP line in file %s line %d\n",
+				fprintf(stderr, "memory allocation error. DSCP line in file %s line %d\n",
 				        fname, linenum);
-				return -1;
 			}
 			else
 			{
 				dscp_values_list = tmp;
 				/* parse the rule */
-				if(read_learn_dscp_line(dscp_values_list + num_dscp_values, name, debug_flag) >= 0)
+				if(read_learn_dscp_line(dscp_values_list + num_dscp_values, name) >= 0)
 				{
 					num_dscp_values++;
 				}
 				else
 				{
-					INIT_PRINT_ERR("parsing error file %s line %d : %s\n",
+					fprintf(stderr, "parsing error file %s line %d : %s\n",
 					        fname, linenum, name);
-					return -1;
 				}
 			}
 			continue;
@@ -222,9 +201,9 @@ readoptionsfile(const char * fname, int debug_flag)
 #endif /* PCP_SADSCP */
 		if(!(equals = strchr(name, '=')))
 		{
-			INIT_PRINT_ERR("parsing error file %s line %d : %s\n",
+			fprintf(stderr, "parsing error file %s line %d : %s\n",
 			        fname, linenum, name);
-			return -1;
+			continue;
 		}
 
 		/* remove ending whitespaces */
@@ -253,18 +232,16 @@ readoptionsfile(const char * fname, int debug_flag)
 
 		if(id == UPNP_INVALID)
 		{
-			INIT_PRINT_ERR("invalid option in file %s line %d : %s=%s\n",
+			fprintf(stderr, "invalid option in file %s line %d : %s=%s\n",
 			        fname, linenum, name, value);
-			return -1;
 		}
 		else
 		{
 			tmp = realloc(ary_options, (num_options + 1) * sizeof(struct option));
 			if(tmp == NULL)
 			{
-				INIT_PRINT_ERR("memory allocation error. Option in file %s line %d.\n",
+				fprintf(stderr, "memory allocation error. Option in file %s line %d.\n",
 				        fname, linenum);
-				return -1;
 			}
 			else
 			{
@@ -273,9 +250,8 @@ readoptionsfile(const char * fname, int debug_flag)
 				tmp = realloc(string_repo, string_repo_len + len);
 				if(tmp == NULL)
 				{
-					INIT_PRINT_ERR("memory allocation error, Option value in file %s line %d : %s=%s\n",
+					fprintf(stderr, "memory allocation error, Option value in file %s line %d : %s=%s\n",
 					        fname, linenum, name, value);
-					return -1;
 				}
 				else
 				{
