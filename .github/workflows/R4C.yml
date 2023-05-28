@@ -32,12 +32,6 @@ jobs:
         #   targets: "WR1200JS"
           - build_variant: "mt7620"
             targets: "PSG1208 PSG1218"
-          - build_variant: "mt7621"
-            targets: "R2100"
-          - build_variant: "mt7621-usb-1"
-            targets: "RT-AC1200GU"
-          - build_variant: "mt7621-usb-2"
-            targets: "MI-R3G B70"
           - build_variant: "mt7628"
             targets: "MI-4C MZ-R13P"
     steps:
